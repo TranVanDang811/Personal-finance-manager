@@ -1,0 +1,34 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:pfm_test;MODE=MySQL;DB_CLOSE_DELAY=-1;DATABASE_TO_LOWER=TRUE
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: false
+
+  flyway:
+    enabled: false
+
+  cache:
+    type: none
+
+  data:
+    redis:
+      repositories:
+        enabled: false
+
+logging:
+  level:
+    com.pfm.personalfinancemanager: INFO
+
+app:
+  storage:
+    provider: local
+    upload-dir: ./target/test-uploads
+  scheduling:
+    enabled: false
+
