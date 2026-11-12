@@ -5,6 +5,8 @@ import { store } from './store';
 import { configureAxiosAuthCallbacks } from './services/axiosInstance';
 import { clearCredentials, setCredentials } from './features/auth/authSlice';
 import { resetNotifications } from './features/notifications/notificationSlice';
+import { I18nProvider } from './i18n/I18nContext';
+import { ThemeProvider } from './theme/ThemeContext';
 import App from './App';
 import './index.css';
 
@@ -21,7 +23,11 @@ configureAxiosAuthCallbacks({
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <Provider store={store}>
-      <App />
+      <ThemeProvider>
+        <I18nProvider>
+          <App />
+        </I18nProvider>
+      </ThemeProvider>
     </Provider>
   </StrictMode>
 );

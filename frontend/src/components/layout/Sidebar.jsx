@@ -9,59 +9,59 @@ import {
   ChartPieIcon,
   CreditCardIcon,
   HomeIcon,
-  SparklesIcon,
   TagIcon,
   UserCircleIcon,
   XMarkIcon,
 } from '@heroicons/react/24/outline';
+import { useTranslation } from '../../i18n/I18nContext';
+import BrandLogo from '../common/BrandLogo';
 
 const NAV_SECTIONS = [
   {
-    title: 'Tổng quan',
+    titleKey: 'nav.sections.overview',
     items: [
-      { to: '/dashboard', label: 'Trang chủ', icon: HomeIcon },
-      { to: '/reports', label: 'Báo cáo tài chính', icon: ChartBarSquareIcon },
+      { to: '/dashboard', labelKey: 'nav.items.dashboard', icon: HomeIcon },
+      { to: '/reports', labelKey: 'nav.items.reports', icon: ChartBarSquareIcon },
     ],
   },
   {
-    title: 'Dòng tiền & Tài khoản',
+    titleKey: 'nav.sections.cashflow',
     items: [
-      { to: '/transactions', label: 'Giao dịch', icon: ArrowsRightLeftIcon },
-      { to: '/accounts', label: 'Tài khoản & Ví', icon: CreditCardIcon },
-      { to: '/categories', label: 'Danh mục', icon: TagIcon },
-      { to: '/recurring', label: 'Giao dịch định kỳ', icon: ArrowPathIcon },
+      { to: '/transactions', labelKey: 'nav.items.transactions', icon: ArrowsRightLeftIcon },
+      { to: '/accounts', labelKey: 'nav.items.accounts', icon: CreditCardIcon },
+      { to: '/categories', labelKey: 'nav.items.categories', icon: TagIcon },
+      { to: '/recurring', labelKey: 'nav.items.recurring', icon: ArrowPathIcon },
     ],
   },
   {
-    title: 'Kế hoạch & Tiết kiệm',
+    titleKey: 'nav.sections.planning',
     items: [
-      { to: '/budgets', label: 'Ngân sách tháng', icon: ChartPieIcon },
-      { to: '/saving-goals', label: 'Mục tiêu tiết kiệm', icon: BanknotesIcon },
+      { to: '/budgets', labelKey: 'nav.items.budgets', icon: ChartPieIcon },
+      { to: '/saving-goals', labelKey: 'nav.items.savingGoals', icon: BanknotesIcon },
     ],
   },
   {
-    title: 'Hệ thống',
+    titleKey: 'nav.sections.system',
     items: [
-      { to: '/notifications', label: 'Thông báo', icon: BellIcon, showBadge: true },
-      { to: '/profile', label: 'Hồ sơ cá nhân', icon: UserCircleIcon },
+      { to: '/notifications', labelKey: 'nav.items.notifications', icon: BellIcon, showBadge: true },
+      { to: '/profile', labelKey: 'nav.items.profile', icon: UserCircleIcon },
     ],
   },
 ];
 
 function SidebarContent({ onNavigate }) {
+  const { t } = useTranslation();
   const unreadCount = useSelector((state) => state.notifications.unreadCount);
   const user = useSelector((state) => state.auth.user);
 
   return (
-    <div className="flex flex-col h-full bg-slate-900 text-slate-300">
-      <div className="flex items-center justify-between h-16 px-5 border-b border-slate-800/80">
+    <div className="flex flex-col h-full bg-slate-900 dark:bg-zinc-950 text-slate-300">
+      <div className="flex items-center justify-between h-16 px-5 border-b border-slate-800/80 dark:border-zinc-800">
         <div className="flex items-center gap-2.5">
-          <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center text-white shadow-sm">
-            <SparklesIcon className="h-5 w-5" />
-          </div>
+          <BrandLogo className="h-9 w-9" />
           <div>
             <span className="text-base font-bold tracking-tight text-white block leading-none">
-              FinFlow
+              DangCap
             </span>
             <span className="text-[11px] text-emerald-400 font-medium">Personal Finance</span>
           </div>
@@ -71,7 +71,7 @@ function SidebarContent({ onNavigate }) {
             type="button"
             onClick={onNavigate}
             className="lg:hidden p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800"
-            aria-label="Đóng menu"
+            aria-label={t('nav.closeMenu')}
           >
             <XMarkIcon className="h-5 w-5" />
           </button>
@@ -80,9 +80,9 @@ function SidebarContent({ onNavigate }) {
 
       <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-6">
         {NAV_SECTIONS.map((section) => (
-          <div key={section.title}>
+          <div key={section.titleKey}>
             <p className="px-3 mb-2 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-              {section.title}
+              {t(section.titleKey)}
             </p>
             <div className="space-y-1">
               {section.items.map((item) => {
@@ -102,7 +102,7 @@ function SidebarContent({ onNavigate }) {
                   >
                     <span className="flex items-center gap-3 min-w-0">
                       <Icon className="h-5 w-5 shrink-0" />
-                      <span className="truncate">{item.label}</span>
+                      <span className="truncate">{t(item.labelKey)}</span>
                     </span>
                     {item.showBadge && unreadCount > 0 && (
                       <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-rose-500 text-white text-[11px] font-semibold tabular-nums">
@@ -128,10 +128,11 @@ function SidebarContent({ onNavigate }) {
           </div>
           <div className="min-w-0">
             <p className="text-xs font-semibold text-white truncate">
-              {user?.fullName || 'Người dùng'}
+              {user?.fullName || t('nav.userFallback')}
             </p>
             <p className="text-[11px] text-slate-400 truncate">
-              Tiền tệ: <span className="text-emerald-400 font-medium">{user?.currency || 'VND'}</span>
+              {t('nav.currencyLabel')}:{' '}
+              <span className="text-emerald-400 font-medium">{user?.currency || 'VND'}</span>
             </p>
           </div>
         </div>
@@ -143,7 +144,7 @@ function SidebarContent({ onNavigate }) {
 export default function Sidebar({ mobileOpen, onCloseMobile }) {
   return (
     <>
-      <aside className="hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-30 lg:w-64 lg:block border-r border-slate-800">
+      <aside className="hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-30 lg:w-64 lg:block border-r border-slate-800 dark:border-zinc-800">
         <SidebarContent />
       </aside>
 
@@ -161,4 +162,3 @@ export default function Sidebar({ mobileOpen, onCloseMobile }) {
     </>
   );
 }
-

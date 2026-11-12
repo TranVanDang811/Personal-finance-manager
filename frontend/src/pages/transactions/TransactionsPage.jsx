@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useForm } from 'react-hook-form';
 import {
@@ -22,6 +22,7 @@ import Pagination from '../../components/common/Pagination';
 import ConfirmDialog from '../../components/feedback/ConfirmDialog';
 import LoadingSpinner from '../../components/feedback/LoadingSpinner';
 import { TRANSACTION_TYPE_MAP, TRANSACTION_TYPES } from '../../constants/enums';
+import { useTranslation } from '../../i18n/I18nContext';
 import {
   dateTimeLocalToIso,
   extractErrorMessage,
@@ -34,6 +35,10 @@ import {
 
 export default function TransactionsPage() {
   const dispatch = useDispatch();
+  const { t } = useTranslation();
+  const tRef = useRef(t);
+  tRef.current = t;
+
   const userCurrency = useSelector((state) => state.auth.user?.currency || 'VND');
 
   const [accounts, setAccounts] = useState([]);
@@ -115,7 +120,7 @@ export default function TransactionsPage() {
       dispatch(
         showToast({
           type: 'error',
-          message: extractErrorMessage(err, 'Không thể tải danh sách giao dịch.'),
+          message: extractErrorMessage(err, tRef.current('transactions.loadError')),
         })
       );
     } finally {
@@ -212,11 +217,11 @@ export default function TransactionsPage() {
       let savedTxId = editingTx?.id;
       if (editingTx) {
         await transactionApi.updateTransaction(editingTx.id, payload);
-        dispatch(showToast({ type: 'success', message: 'Cập nhật giao dịch thành công.' }));
+        dispatch(showToast({ type: 'success', message: t('transactions.updateSuccess') }));
       } else {
         const res = await transactionApi.createTransaction(payload, idempotencyKey);
         savedTxId = res.data?.id;
-        dispatch(showToast({ type: 'success', message: 'Ghi nhận giao dịch thành công.' }));
+        dispatch(showToast({ type: 'success', message: t('transactions.createSuccess') }));
       }
 
       if (selectedFile && savedTxId) {
@@ -226,10 +231,7 @@ export default function TransactionsPage() {
           dispatch(
             showToast({
               type: 'error',
-              message: extractErrorMessage(
-                uploadErr,
-                'Đã lưu giao dịch nhưng không thể tải lên ảnh chứng từ.'
-              ),
+              message: extractErrorMessage(uploadErr, t('transactions.uploadAfterCreateError')),
             })
           );
         }
@@ -241,7 +243,7 @@ export default function TransactionsPage() {
       dispatch(
         showToast({
           type: 'error',
-          message: extractErrorMessage(err, 'Không thể lưu giao dịch.'),
+          message: extractErrorMessage(err, t('transactions.saveError')),
         })
       );
     } finally {
@@ -255,7 +257,7 @@ export default function TransactionsPage() {
       setSelectedFile(null);
       return;
     }
-    const validationErr = validateImageFile(file, 5);
+    const validationErr = validateImageFile(file, 5, t);
     if (validationErr) {
       dispatch(showToast({ type: 'error', message: validationErr }));
       e.target.value = '';
@@ -269,7 +271,7 @@ export default function TransactionsPage() {
     const file = e.target.files?.[0];
     e.target.value = '';
     if (!file || !attachmentTx) return;
-    const validationErr = validateImageFile(file, 5);
+    const validationErr = validateImageFile(file, 5, t);
     if (validationErr) {
       dispatch(showToast({ type: 'error', message: validationErr }));
       return;
@@ -278,13 +280,13 @@ export default function TransactionsPage() {
     try {
       const res = await transactionApi.uploadAttachment(attachmentTx.id, file);
       setAttachmentTx(res.data);
-      dispatch(showToast({ type: 'success', message: 'Tải lên chứng từ thành công.' }));
+      dispatch(showToast({ type: 'success', message: t('transactions.uploadSuccess') }));
       await loadTransactions();
     } catch (err) {
       dispatch(
         showToast({
           type: 'error',
-          message: extractErrorMessage(err, 'Không thể tải tệp đính kèm.'),
+          message: extractErrorMessage(err, t('transactions.uploadError')),
         })
       );
     } finally {
@@ -297,14 +299,14 @@ export default function TransactionsPage() {
     setDeleting(true);
     try {
       await transactionApi.deleteTransaction(deleteTarget.id);
-      dispatch(showToast({ type: 'success', message: 'Đã xóa giao dịch.' }));
+      dispatch(showToast({ type: 'success', message: t('transactions.deleteSuccess') }));
       setDeleteTarget(null);
       await Promise.all([loadTransactions(), loadMetadata()]);
     } catch (err) {
       dispatch(
         showToast({
           type: 'error',
-          message: extractErrorMessage(err, 'Không thể xóa giao dịch.'),
+          message: extractErrorMessage(err, t('transactions.deleteError')),
         })
       );
     } finally {
@@ -328,8 +330,8 @@ export default function TransactionsPage() {
                 setKeyword(e.target.value);
                 setFilters((prev) => ({ ...prev, page: 0 }));
               }}
-              placeholder="Tìm kiếm theo mô tả, ghi chú..."
-              className="w-full rounded-xl border border-slate-200 pl-9 pr-3.5 py-2 text-xs focus:border-emerald-500 outline-none"
+              placeholder={t('transactions.searchPlaceholder')}
+              className="w-full rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-900 dark:text-slate-100 pl-9 pr-3.5 py-2 text-xs focus:border-emerald-500 outline-none"
             />
           </div>
 
@@ -337,10 +339,10 @@ export default function TransactionsPage() {
             <button
               type="button"
               onClick={resetFilters}
-              className="inline-flex items-center gap-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-600 hover:bg-slate-50"
+              className="inline-flex items-center gap-1 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-3 py-2 text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-zinc-800"
             >
               <FunnelIcon className="h-3.5 w-3.5" />
-              Đặt lại
+              {t('common.reset')}
             </button>
             <button
               type="button"
@@ -348,7 +350,7 @@ export default function TransactionsPage() {
               className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 text-xs font-semibold transition-colors"
             >
               <PlusIcon className="h-4 w-4" />
-              Thêm giao dịch
+              {t('transactions.addTx')}
             </button>
           </div>
         </div>
@@ -357,12 +359,12 @@ export default function TransactionsPage() {
           <select
             value={filters.transactionType}
             onChange={(e) => updateFilter('transactionType', e.target.value)}
-            className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700 outline-none"
+            className="rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-3 py-2 text-xs text-slate-700 dark:text-slate-200 outline-none"
           >
-            <option value="">Tất cả loại giao dịch</option>
-            {TRANSACTION_TYPES.map((t) => (
-              <option key={t.value} value={t.value}>
-                {t.label}
+            <option value="">{t('transactions.allTypes')}</option>
+            {TRANSACTION_TYPES.map((item) => (
+              <option key={item.value} value={item.value}>
+                {t(item.labelKey)}
               </option>
             ))}
           </select>
@@ -370,9 +372,9 @@ export default function TransactionsPage() {
           <select
             value={filters.accountId}
             onChange={(e) => updateFilter('accountId', e.target.value)}
-            className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700 outline-none"
+            className="rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-3 py-2 text-xs text-slate-700 dark:text-slate-200 outline-none"
           >
-            <option value="">Tất cả tài khoản</option>
+            <option value="">{t('transactions.allAccounts')}</option>
             {accounts.map((a) => (
               <option key={a.id} value={a.id}>
                 {a.accountName}
@@ -383,12 +385,12 @@ export default function TransactionsPage() {
           <select
             value={filters.categoryId}
             onChange={(e) => updateFilter('categoryId', e.target.value)}
-            className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700 outline-none"
+            className="rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-3 py-2 text-xs text-slate-700 dark:text-slate-200 outline-none"
           >
-            <option value="">Tất cả danh mục</option>
+            <option value="">{t('transactions.allCategories')}</option>
             {categories.map((c) => (
               <option key={c.id} value={c.id}>
-                {c.name} ({c.categoryType === 'INCOME' ? 'Thu' : 'Chi'})
+                {c.name} ({c.categoryType === 'INCOME' ? t('reports.incomeShort') : t('reports.expenseShort')})
               </option>
             ))}
           </select>
@@ -397,56 +399,56 @@ export default function TransactionsPage() {
             type="date"
             value={filters.startDate}
             onChange={(e) => updateFilter('startDate', e.target.value)}
-            className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700 outline-none"
-            title="Từ ngày"
+            className="rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-3 py-2 text-xs text-slate-700 dark:text-slate-200 outline-none"
+            title={t('transactions.fromDateTitle')}
           />
 
           <input
             type="date"
             value={filters.endDate}
             onChange={(e) => updateFilter('endDate', e.target.value)}
-            className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700 outline-none"
-            title="Đến ngày"
+            className="rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-3 py-2 text-xs text-slate-700 dark:text-slate-200 outline-none"
+            title={t('transactions.toDateTitle')}
           />
         </div>
       </div>
 
       <div className="card-surface overflow-hidden">
         {loading ? (
-          <LoadingSpinner label="Đang tải danh sách giao dịch..." />
+          <LoadingSpinner label={t('transactions.loading')} />
         ) : !pageData.content?.length ? (
           <EmptyState
             icon={ArrowsRightLeftIcon}
-            title="Không tìm thấy giao dịch nào"
-            description="Thử thay đổi bộ lọc hoặc ghi nhận một giao dịch thu chi mới."
+            title={t('transactions.emptyTitle')}
+            description={t('transactions.emptyDesc')}
           />
         ) : (
           <>
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="border-b border-slate-100 bg-slate-50/70 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-                    <th className="py-3 px-4">Danh mục / Mô tả</th>
-                    <th className="py-3 px-4">Tài khoản</th>
-                    <th className="py-3 px-4">Loại</th>
-                    <th className="py-3 px-4">Thời gian</th>
-                    <th className="py-3 px-4 text-right">Số tiền</th>
-                    <th className="py-3 px-4 text-right">Thao tác</th>
+                  <tr className="border-b border-slate-100 dark:border-zinc-800 bg-slate-50/70 dark:bg-zinc-900/70 text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                    <th className="py-3 px-4">{t('transactions.colCategoryDesc')}</th>
+                    <th className="py-3 px-4">{t('transactions.colAccount')}</th>
+                    <th className="py-3 px-4">{t('transactions.colType')}</th>
+                    <th className="py-3 px-4">{t('transactions.colTime')}</th>
+                    <th className="py-3 px-4 text-right">{t('transactions.colAmount')}</th>
+                    <th className="py-3 px-4 text-right">{t('transactions.colActions')}</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100 text-xs">
+                <tbody className="divide-y divide-slate-100 dark:divide-zinc-800 text-xs">
                   {pageData.content.map((tx) => {
                     const typeInfo = TRANSACTION_TYPE_MAP[tx.transactionType] || {};
                     const isExpense = tx.transactionType === 'EXPENSE';
                     const isIncome = tx.transactionType === 'INCOME';
                     return (
-                      <tr key={tx.id} className="hover:bg-slate-50/70 transition-colors">
+                      <tr key={tx.id} className="hover:bg-slate-50/70 dark:hover:bg-zinc-900/60 transition-colors">
                         <td className="py-3 px-4">
                           <div className="flex items-center gap-3">
                             <div
                               className="h-9 w-9 rounded-xl flex items-center justify-center shrink-0"
                               style={{
-                                backgroundColor: tx.categoryColor ? `${tx.categoryColor}18` : '#E0F2FE',
+                                backgroundColor: tx.categoryColor ? `${tx.categoryColor}20` : '#E0F2FE',
                               }}
                             >
                               <CategoryIcon
@@ -456,44 +458,47 @@ export default function TransactionsPage() {
                               />
                             </div>
                             <div className="min-w-0 max-w-xs">
-                              <p className="font-semibold text-slate-900 truncate">
-                                {tx.description || tx.categoryName || 'Chuyển khoản nội bộ'}
+                              <p className="font-semibold text-slate-900 dark:text-white truncate">
+                                {tx.description || tx.categoryName || t('transactions.internalTransfer')}
                               </p>
-                              <div className="flex items-center gap-2 text-[11px] text-slate-500">
-                                <span>{tx.categoryName || 'Chuyển khoản'}</span>
+                              <div className="flex items-center gap-2 text-[11px] text-slate-500 dark:text-slate-400">
+                                <span>{tx.categoryName || t('transactions.transferCategory')}</span>
                                 {tx.recurringTransactionId && (
-                                  <span className="px-1.5 py-0.2 rounded bg-indigo-50 text-indigo-600 font-medium">
-                                    Định kỳ
+                                  <span className="px-1.5 py-0.2 rounded bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-300 font-medium">
+                                    {t('transactions.recurringBadge')}
                                   </span>
                                 )}
                                 {tx.attachmentUrl && (
-                                  <PaperClipIcon className="h-3.5 w-3.5 text-emerald-600" title="Có chứng từ" />
+                                  <PaperClipIcon
+                                    className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400"
+                                    title={t('transactions.hasAttachmentTitle')}
+                                  />
                                 )}
                               </div>
                             </div>
                           </div>
                         </td>
-                        <td className="py-3 px-4 text-slate-700 font-medium">
+                        <td className="py-3 px-4 text-slate-700 dark:text-slate-200 font-medium">
                           {tx.accountName}
                           {tx.toAccountName && (
-                            <span className="text-slate-400"> → {tx.toAccountName}</span>
+                            <span className="text-slate-400 dark:text-slate-500"> → {tx.toAccountName}</span>
                           )}
                         </td>
                         <td className="py-3 px-4">
                           <span
                             className={`inline-block px-2 py-0.5 rounded-full text-[11px] font-medium border ${
-                              typeInfo.badgeClass || 'bg-slate-50 text-slate-600 border-slate-200'
+                              typeInfo.badgeClass || 'bg-slate-50 dark:bg-zinc-900 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-zinc-700'
                             }`}
                           >
-                            {typeInfo.label || tx.transactionType}
+                            {typeInfo.labelKey ? t(typeInfo.labelKey) : tx.transactionType}
                           </span>
                         </td>
-                        <td className="py-3 px-4 text-slate-500 whitespace-nowrap tabular-nums">
+                        <td className="py-3 px-4 text-slate-500 dark:text-slate-400 whitespace-nowrap tabular-nums">
                           {formatDateTime(tx.transactionDate)}
                         </td>
                         <td
                           className={`py-3 px-4 text-right font-bold tabular-nums whitespace-nowrap ${
-                            isIncome ? 'text-emerald-600' : isExpense ? 'text-rose-600' : 'text-sky-600'
+                            isIncome ? 'text-emerald-600 dark:text-emerald-400' : isExpense ? 'text-rose-600 dark:text-rose-400' : 'text-sky-600 dark:text-sky-400'
                           }`}
                         >
                           {isIncome ? '+' : isExpense ? '-' : ''}
@@ -504,26 +509,28 @@ export default function TransactionsPage() {
                             <button
                               type="button"
                               onClick={() => setAttachmentTx(tx)}
-                              className={`p-1.5 rounded-lg hover:bg-slate-100 ${
-                                tx.attachmentUrl ? 'text-emerald-600' : 'text-slate-400 hover:text-slate-700'
+                              className={`p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-zinc-800 ${
+                                tx.attachmentUrl
+                                  ? 'text-emerald-600 dark:text-emerald-400'
+                                  : 'text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
                               }`}
-                              title="Chứng từ đính kèm"
+                              title={t('transactions.attachmentBtnTitle')}
                             >
                               <PaperClipIcon className="h-4 w-4" />
                             </button>
                             <button
                               type="button"
                               onClick={() => openEditModal(tx)}
-                              className="p-1.5 rounded-lg text-slate-400 hover:text-slate-800 hover:bg-slate-100"
-                              title="Chỉnh sửa"
+                              className="p-1.5 rounded-lg text-slate-400 hover:text-slate-800 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-zinc-800"
+                              title={t('common.edit')}
                             >
                               <PencilSquareIcon className="h-4 w-4" />
                             </button>
                             <button
                               type="button"
                               onClick={() => setDeleteTarget(tx)}
-                              className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50"
-                              title="Xóa"
+                              className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/50"
+                              title={t('common.delete')}
                             >
                               <TrashIcon className="h-4 w-4" />
                             </button>
@@ -550,23 +557,25 @@ export default function TransactionsPage() {
       <Modal
         isOpen={modalOpen}
         onClose={() => setModalOpen(false)}
-        title={editingTx ? 'Chỉnh sửa giao dịch' : 'Ghi nhận giao dịch mới'}
-        subtitle="Số dư tài khoản và ngân sách sẽ được tự động cập nhật."
+        title={editingTx ? t('transactions.modalEditTitle') : t('transactions.modalCreateTitle')}
+        subtitle={t('transactions.modalSubtitle')}
       >
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <div className="grid grid-cols-3 gap-2 p-1 rounded-xl bg-slate-100">
-            {TRANSACTION_TYPES.map((t) => {
-              const active = watchedType === t.value;
+          <div className="grid grid-cols-3 gap-2 p-1 rounded-xl bg-slate-100 dark:bg-zinc-900">
+            {TRANSACTION_TYPES.map((item) => {
+              const active = watchedType === item.value;
               return (
                 <button
-                  key={t.value}
+                  key={item.value}
                   type="button"
-                  onClick={() => handleTypeSwitch(t.value)}
+                  onClick={() => handleTypeSwitch(item.value)}
                   className={`py-2 rounded-lg text-xs font-semibold transition-all ${
-                    active ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-800'
+                    active
+                      ? 'bg-white dark:bg-zinc-800 text-slate-900 dark:text-white shadow-sm'
+                      : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white'
                   }`}
                 >
-                  {t.label}
+                  {t(item.labelKey)}
                 </button>
               );
             })}
@@ -574,15 +583,17 @@ export default function TransactionsPage() {
 
           <div className="grid sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                {watchedType === 'TRANSFER' ? 'Tài khoản nguồn' : 'Tài khoản'}{' '}
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                {watchedType === 'TRANSFER'
+                  ? t('transactions.sourceAccount')
+                  : t('transactions.account')}{' '}
                 <span className="text-rose-500">*</span>
               </label>
               <select
-                {...register('accountId', { required: 'Vui lòng chọn tài khoản' })}
-                className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm bg-white outline-none focus:border-emerald-500"
+                {...register('accountId', { required: t('transactions.accountRequired') })}
+                className="w-full rounded-xl border border-slate-200 dark:border-zinc-800 px-3 py-2.5 text-sm bg-white dark:bg-zinc-900 text-slate-900 dark:text-slate-100 outline-none focus:border-emerald-500"
               >
-                <option value="">Chọn tài khoản</option>
+                <option value="">{t('transactions.chooseAccount')}</option>
                 {selectableAccounts.map((acc) => (
                   <option key={acc.id} value={acc.id}>
                     {acc.accountName} ({formatCurrency(acc.currentBalance, acc.currency)})
@@ -590,25 +601,25 @@ export default function TransactionsPage() {
                 ))}
               </select>
               {errors.accountId && (
-                <p className="text-xs text-rose-600 mt-1">{errors.accountId.message}</p>
+                <p className="text-xs text-rose-600 dark:text-rose-400 mt-1">{errors.accountId.message}</p>
               )}
             </div>
 
             {watchedType === 'TRANSFER' ? (
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                  Tài khoản đích <span className="text-rose-500">*</span>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                  {t('transactions.targetAccount')} <span className="text-rose-500">*</span>
                 </label>
                 <select
                   {...register('toAccountId', {
                     validate: (val) =>
                       watchedType !== 'TRANSFER' ||
                       (Boolean(val) && val !== watchedAccountId) ||
-                      'Chọn tài khoản đích khác tài khoản nguồn',
+                      t('transactions.targetInvalid'),
                   })}
-                  className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm bg-white outline-none focus:border-emerald-500"
+                  className="w-full rounded-xl border border-slate-200 dark:border-zinc-800 px-3 py-2.5 text-sm bg-white dark:bg-zinc-900 text-slate-900 dark:text-slate-100 outline-none focus:border-emerald-500"
                 >
-                  <option value="">Chọn tài khoản nhận</option>
+                  <option value="">{t('transactions.chooseTarget')}</option>
                   {selectableAccounts
                     .filter((acc) => acc.id !== watchedAccountId)
                     .map((acc) => (
@@ -618,22 +629,22 @@ export default function TransactionsPage() {
                     ))}
                 </select>
                 {errors.toAccountId && (
-                  <p className="text-xs text-rose-600 mt-1">{errors.toAccountId.message}</p>
+                  <p className="text-xs text-rose-600 dark:text-rose-400 mt-1">{errors.toAccountId.message}</p>
                 )}
               </div>
             ) : (
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                  Danh mục <span className="text-rose-500">*</span>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                  {t('transactions.category')} <span className="text-rose-500">*</span>
                 </label>
                 <select
                   {...register('categoryId', {
                     validate: (val) =>
-                      watchedType === 'TRANSFER' || Boolean(val) || 'Vui lòng chọn danh mục',
+                      watchedType === 'TRANSFER' || Boolean(val) || t('transactions.categoryRequired'),
                   })}
-                  className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm bg-white outline-none focus:border-emerald-500"
+                  className="w-full rounded-xl border border-slate-200 dark:border-zinc-800 px-3 py-2.5 text-sm bg-white dark:bg-zinc-900 text-slate-900 dark:text-slate-100 outline-none focus:border-emerald-500"
                 >
-                  <option value="">Chọn danh mục</option>
+                  <option value="">{t('transactions.chooseCategory')}</option>
                   {selectableCategories.map((c) => (
                     <option key={c.id} value={c.id}>
                       {c.name}
@@ -641,7 +652,7 @@ export default function TransactionsPage() {
                   ))}
                 </select>
                 {errors.categoryId && (
-                  <p className="text-xs text-rose-600 mt-1">{errors.categoryId.message}</p>
+                  <p className="text-xs text-rose-600 dark:text-rose-400 mt-1">{errors.categoryId.message}</p>
                 )}
               </div>
             )}
@@ -649,71 +660,77 @@ export default function TransactionsPage() {
 
           <div className="grid sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                Số tiền <span className="text-rose-500">*</span>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                {t('transactions.amount')} <span className="text-rose-500">*</span>
               </label>
               <input
                 type="number"
                 step="0.01"
                 placeholder="0"
                 {...register('amount', {
-                  required: 'Vui lòng nhập số tiền',
-                  min: { value: 0.01, message: 'Số tiền phải lớn hơn 0' },
+                  required: t('transactions.amountRequired'),
+                  min: { value: 0.01, message: t('transactions.amountMin') },
                 })}
-                className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm tabular-nums outline-none focus:border-emerald-500"
+                className="w-full rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-900 dark:text-slate-100 px-3.5 py-2.5 text-sm tabular-nums outline-none focus:border-emerald-500"
               />
               {errors.amount && (
-                <p className="text-xs text-rose-600 mt-1">{errors.amount.message}</p>
+                <p className="text-xs text-rose-600 dark:text-rose-400 mt-1">{errors.amount.message}</p>
               )}
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                Thời gian <span className="text-rose-500">*</span>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                {t('transactions.time')} <span className="text-rose-500">*</span>
               </label>
               <input
                 type="datetime-local"
-                {...register('transactionDate', { required: 'Vui lòng chọn thời gian' })}
-                className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-emerald-500"
+                {...register('transactionDate', { required: t('transactions.timeRequired') })}
+                className="w-full rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-900 dark:text-slate-100 px-3 py-2.5 text-sm outline-none focus:border-emerald-500"
               />
               {errors.transactionDate && (
-                <p className="text-xs text-rose-600 mt-1">{errors.transactionDate.message}</p>
+                <p className="text-xs text-rose-600 dark:text-rose-400 mt-1">{errors.transactionDate.message}</p>
               )}
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1.5">Mô tả</label>
+            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+              {t('transactions.description')}
+            </label>
             <input
               type="text"
-              placeholder="Ví dụ: Ăn trưa, Lương tháng 11..."
-              {...register('description', { maxLength: { value: 255, message: 'Tối đa 255 ký tự' } })}
-              className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm outline-none focus:border-emerald-500"
+              placeholder={t('transactions.descriptionPlaceholder')}
+              {...register('description', {
+                maxLength: { value: 255, message: t('transactions.descriptionMax') },
+              })}
+              className="w-full rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-900 dark:text-slate-100 px-3.5 py-2.5 text-sm outline-none focus:border-emerald-500"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1.5">Ghi chú</label>
+            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+              {t('transactions.note')}
+            </label>
             <textarea
               rows={2}
-              placeholder="Chi tiết bổ sung (nếu có)..."
-              {...register('note', { maxLength: { value: 1000, message: 'Tối đa 1000 ký tự' } })}
-              className="w-full rounded-xl border border-slate-200 px-3.5 py-2 text-sm outline-none focus:border-emerald-500"
+              placeholder={t('transactions.notePlaceholder')}
+              {...register('note', { maxLength: { value: 1000, message: t('transactions.noteMax') } })}
+              className="w-full rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-900 dark:text-slate-100 px-3.5 py-2 text-sm outline-none focus:border-emerald-500"
             />
           </div>
 
           {!editingTx && (
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                Đính kèm ảnh hóa đơn / chứng từ (Tùy chọn)
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                {t('transactions.attachmentOptional')}
               </label>
               <input
                 type="file"
                 accept="image/jpeg,image/png,image/webp"
                 onChange={handleSelectAttachmentForCreate}
-                className="w-full text-xs text-slate-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200"
+                className="w-full text-xs text-slate-500 dark:text-slate-400 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-slate-100 dark:file:bg-zinc-800 file:text-slate-700 dark:file:text-slate-200 hover:file:bg-slate-200 dark:hover:file:bg-zinc-700"
               />
-              <p className="text-[11px] text-slate-400 mt-1">Hỗ trợ JPG, PNG, WEBP tối đa 5MB.</p>
+              <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-1">{t('common.uploadMaxHint')}</p>
             </div>
           )}
 
@@ -721,16 +738,20 @@ export default function TransactionsPage() {
             <button
               type="button"
               onClick={() => setModalOpen(false)}
-              className="px-4 py-2 rounded-xl border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+              className="px-4 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-zinc-800"
             >
-              Hủy
+              {t('common.cancel')}
             </button>
             <button
               type="submit"
               disabled={submitting}
               className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold disabled:opacity-60"
             >
-              {submitting ? 'Đang lưu...' : editingTx ? 'Cập nhật' : 'Lưu giao dịch'}
+              {submitting
+                ? t('common.saving')
+                : editingTx
+                  ? t('common.update')
+                  : t('transactions.saveTxBtn')}
             </button>
           </div>
         </form>
@@ -739,17 +760,21 @@ export default function TransactionsPage() {
       <Modal
         isOpen={Boolean(attachmentTx)}
         onClose={() => setAttachmentTx(null)}
-        title="Chứng từ giao dịch"
-        subtitle={attachmentTx?.description || attachmentTx?.categoryName || 'Giao dịch'}
+        title={t('transactions.attachmentModalTitle')}
+        subtitle={
+          attachmentTx?.description ||
+          attachmentTx?.categoryName ||
+          t('transactions.attachmentModalFallback')
+        }
       >
         <div className="space-y-4">
           {attachmentTx?.attachmentUrl ? (
-            <div className="rounded-xl border border-slate-200 p-3 bg-slate-50 space-y-2">
+            <div className="rounded-xl border border-slate-200 dark:border-zinc-800 p-3 bg-slate-50 dark:bg-zinc-900 space-y-2">
               {(/\.(png|jpe?g|gif|webp)(\?.*)?$/i.test(attachmentTx.attachmentUrl) ||
                 attachmentTx.attachmentUrl.includes('/image/upload/')) ? (
                 <img
                   src={attachmentTx.attachmentUrl}
-                  alt="Chứng từ giao dịch"
+                  alt={t('transactions.attachmentAlt')}
                   className="max-h-72 w-auto mx-auto rounded-lg object-contain"
                 />
               ) : null}
@@ -758,30 +783,32 @@ export default function TransactionsPage() {
                   href={attachmentTx.attachmentUrl}
                   target="_blank"
                   rel="noreferrer"
-                  className="text-xs font-semibold text-emerald-600 hover:underline"
+                  className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:underline"
                 >
-                  Mở ảnh chứng từ trong tab mới
+                  {t('transactions.openImageNewTab')}
                 </a>
               </div>
             </div>
           ) : (
-            <p className="text-xs text-slate-500">Giao dịch này chưa có ảnh đính kèm.</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400">{t('transactions.noAttachmentYet')}</p>
           )}
 
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-              {attachmentTx?.attachmentUrl ? 'Thay thế ảnh chứng từ mới' : 'Tải lên ảnh chứng từ'}
+            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+              {attachmentTx?.attachmentUrl
+                ? t('transactions.replaceImage')
+                : t('transactions.uploadImage')}
             </label>
             <input
               type="file"
               accept="image/jpeg,image/png,image/webp"
               disabled={uploadingAttachment}
               onChange={handleUploadAttachment}
-              className="w-full text-xs text-slate-500 file:mr-3 file:py-2 file:px-3.5 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100"
+              className="w-full text-xs text-slate-500 dark:text-slate-400 file:mr-3 file:py-2 file:px-3.5 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-emerald-50 dark:file:bg-emerald-950/60 file:text-emerald-700 dark:file:text-emerald-300 hover:file:bg-emerald-100 dark:hover:file:bg-emerald-900/60"
             />
-            <p className="text-[11px] text-slate-400 mt-1">Hỗ trợ JPG, PNG, WEBP tối đa 5MB.</p>
+            <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-1">{t('common.uploadMaxHint')}</p>
             {uploadingAttachment && (
-              <p className="text-xs text-slate-500 mt-2">Đang tải ảnh lên Cloudinary...</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">{t('transactions.uploadingCloudinary')}</p>
             )}
           </div>
         </div>
@@ -792,11 +819,10 @@ export default function TransactionsPage() {
         onClose={() => setDeleteTarget(null)}
         onConfirm={handleDelete}
         loading={deleting}
-        title="Xóa giao dịch"
-        message="Số dư tài khoản liên quan sẽ được hoàn tác khi bạn xóa giao dịch này. Tiếp tục?"
-        confirmLabel="Xóa giao dịch"
+        title={t('transactions.deleteTitle')}
+        message={t('transactions.deleteConfirmMsg')}
+        confirmLabel={t('transactions.deleteConfirmBtn')}
       />
     </div>
   );
 }
-

@@ -85,13 +85,17 @@ export function generateIdempotencyKey() {
 
 const ALLOWED_IMAGE_MIME_TYPES = new Set(['image/jpeg', 'image/jpg', 'image/png', 'image/webp']);
 
-export function validateImageFile(file, maxSizeMb = 5) {
-  if (!file) return 'Vui lòng chọn tệp ảnh hợp lệ.';
+export function validateImageFile(file, maxSizeMb = 5, t) {
+  if (!file) {
+    return t ? t('validation.imageInvalidFile') : 'Vui lòng chọn tệp ảnh hợp lệ.';
+  }
   if (!ALLOWED_IMAGE_MIME_TYPES.has((file.type || '').toLowerCase())) {
-    return 'Chỉ hỗ trợ ảnh định dạng JPG, PNG hoặc WEBP.';
+    return t ? t('validation.imageInvalidType') : 'Chỉ hỗ trợ ảnh định dạng JPG, PNG hoặc WEBP.';
   }
   if (file.size > maxSizeMb * 1024 * 1024) {
-    return `Kích thước ảnh tối đa ${maxSizeMb}MB.`;
+    return t
+      ? t('validation.imageMaxSize', { max: maxSizeMb })
+      : `Kích thước ảnh tối đa ${maxSizeMb}MB.`;
   }
   return null;
 }

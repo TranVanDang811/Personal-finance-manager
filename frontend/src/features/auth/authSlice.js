@@ -4,6 +4,9 @@ import { userApi } from '../../services/userApi';
 import { storage } from '../../utils/storage';
 import { extractErrorMessage } from '../../utils/formatters';
 
+const localizedFallback = (viText, enText) =>
+  storage.getLanguage() === 'en' ? enText : viText;
+
 export const loginUser = createAsyncThunk(
   'auth/login',
   async (credentials, { rejectWithValue }) => {
@@ -12,7 +15,9 @@ export const loginUser = createAsyncThunk(
       storage.setAuthSession(res.data);
       return res;
     } catch (err) {
-      return rejectWithValue(extractErrorMessage(err, 'Đăng nhập thất bại'));
+      return rejectWithValue(
+        extractErrorMessage(err, localizedFallback('Đăng nhập thất bại', 'Sign in failed'))
+      );
     }
   }
 );
@@ -25,7 +30,9 @@ export const registerUser = createAsyncThunk(
       storage.setAuthSession(res.data);
       return res;
     } catch (err) {
-      return rejectWithValue(extractErrorMessage(err, 'Đăng ký tài khoản thất bại'));
+      return rejectWithValue(
+        extractErrorMessage(err, localizedFallback('Đăng ký tài khoản thất bại', 'Registration failed'))
+      );
     }
   }
 );
@@ -38,7 +45,9 @@ export const fetchCurrentUser = createAsyncThunk(
       storage.setUser(res.data);
       return res.data;
     } catch (err) {
-      return rejectWithValue(extractErrorMessage(err, 'Không thể tải hồ sơ người dùng'));
+      return rejectWithValue(
+        extractErrorMessage(err, localizedFallback('Không thể tải hồ sơ người dùng', 'Unable to load user profile'))
+      );
     }
   }
 );

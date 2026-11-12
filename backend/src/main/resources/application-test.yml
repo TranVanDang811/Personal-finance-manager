@@ -31,4 +31,9 @@ app:
     upload-dir: ./target/test-uploads
   scheduling:
     enabled: false
+  security:
+    rate-limit:
+      enabled: false
+      max-requests: 20
+      window-seconds: 60
 

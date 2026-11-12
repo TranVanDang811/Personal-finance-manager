@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useForm } from 'react-hook-form';
 import {
@@ -20,12 +20,13 @@ import EmptyState from '../../components/common/EmptyState';
 import ConfirmDialog from '../../components/feedback/ConfirmDialog';
 import LoadingSpinner from '../../components/feedback/LoadingSpinner';
 import {
-  ACCOUNT_STATUS_LABELS,
-  ACCOUNT_TYPE_LABELS,
+  ACCOUNT_STATUS_LABEL_KEYS,
+  ACCOUNT_TYPE_LABEL_KEYS,
   ACCOUNT_TYPES,
   CURRENCIES,
   TRANSACTION_TYPE_MAP,
 } from '../../constants/enums';
+import { useTranslation } from '../../i18n/I18nContext';
 import { extractErrorMessage, formatCurrency, formatDateTime } from '../../utils/formatters';
 
 function getAccountIcon(type) {
@@ -36,6 +37,10 @@ function getAccountIcon(type) {
 
 export default function AccountsPage() {
   const dispatch = useDispatch();
+  const { t } = useTranslation();
+  const tRef = useRef(t);
+  tRef.current = t;
+
   const userCurrency = useSelector((state) => state.auth.user?.currency || 'VND');
 
   const [loading, setLoading] = useState(true);
@@ -52,7 +57,13 @@ export default function AccountsPage() {
 
   const [txAccount, setTxAccount] = useState(null);
   const [txLoading, setTxLoading] = useState(false);
-  const [txPageData, setTxPageData] = useState({ content: [], pageNumber: 0, totalPages: 0, totalElements: 0, pageSize: 8 });
+  const [txPageData, setTxPageData] = useState({
+    content: [],
+    pageNumber: 0,
+    totalPages: 0,
+    totalElements: 0,
+    pageSize: 8,
+  });
 
   const {
     register,
@@ -80,7 +91,7 @@ export default function AccountsPage() {
       dispatch(
         showToast({
           type: 'error',
-          message: extractErrorMessage(err, 'Không thể tải danh sách tài khoản.'),
+          message: extractErrorMessage(err, tRef.current('accounts.loadError')),
         })
       );
     } finally {
@@ -128,7 +139,7 @@ export default function AccountsPage() {
           allowNegative: values.accountType === 'BANK_ACCOUNT' ? Boolean(values.allowNegative) : false,
           status: editingAccount.status,
         });
-        dispatch(showToast({ type: 'success', message: 'Cập nhật tài khoản thành công.' }));
+        dispatch(showToast({ type: 'success', message: t('accounts.updateSuccess') }));
       } else {
         await accountApi.createAccount({
           accountName: values.accountName.trim(),
@@ -138,7 +149,7 @@ export default function AccountsPage() {
           description: values.description?.trim() || null,
           allowNegative: values.accountType === 'BANK_ACCOUNT' ? Boolean(values.allowNegative) : false,
         });
-        dispatch(showToast({ type: 'success', message: 'Tạo tài khoản mới thành công.' }));
+        dispatch(showToast({ type: 'success', message: t('accounts.createSuccess') }));
       }
       setModalOpen(false);
       await loadAccounts();
@@ -146,7 +157,7 @@ export default function AccountsPage() {
       dispatch(
         showToast({
           type: 'error',
-          message: extractErrorMessage(err, 'Không thể lưu tài khoản.'),
+          message: extractErrorMessage(err, t('accounts.saveError')),
         })
       );
     } finally {
@@ -158,17 +169,27 @@ export default function AccountsPage() {
     try {
       if (acc.status === 'ACTIVE') {
         await accountApi.archiveAccount(acc.id);
-        dispatch(showToast({ type: 'success', message: `Đã lưu trữ "${acc.accountName}".` }));
+        dispatch(
+          showToast({
+            type: 'success',
+            message: t('accounts.archiveSuccess', { name: acc.accountName }),
+          })
+        );
       } else {
         await accountApi.unarchiveAccount(acc.id);
-        dispatch(showToast({ type: 'success', message: `Đã khôi phục "${acc.accountName}".` }));
+        dispatch(
+          showToast({
+            type: 'success',
+            message: t('accounts.unarchiveSuccess', { name: acc.accountName }),
+          })
+        );
       }
       await loadAccounts();
     } catch (err) {
       dispatch(
         showToast({
           type: 'error',
-          message: extractErrorMessage(err, 'Không thể thay đổi trạng thái tài khoản.'),
+          message: extractErrorMessage(err, t('accounts.statusError')),
         })
       );
     }
@@ -179,14 +200,19 @@ export default function AccountsPage() {
     setDeleting(true);
     try {
       await accountApi.deleteAccount(deleteTarget.id);
-      dispatch(showToast({ type: 'success', message: `Đã xóa tài khoản "${deleteTarget.accountName}".` }));
+      dispatch(
+        showToast({
+          type: 'success',
+          message: t('accounts.deleteSuccess', { name: deleteTarget.accountName }),
+        })
+      );
       setDeleteTarget(null);
       await loadAccounts();
     } catch (err) {
       dispatch(
         showToast({
           type: 'error',
-          message: extractErrorMessage(err, 'Không thể xóa tài khoản.'),
+          message: extractErrorMessage(err, t('accounts.deleteError')),
         })
       );
     } finally {
@@ -199,12 +225,14 @@ export default function AccountsPage() {
     setTxLoading(true);
     try {
       const res = await accountApi.getAccountTransactions(acc.id, { page, size: 8 });
-      setTxPageData(res.data || { content: [], pageNumber: 0, totalPages: 0, totalElements: 0, pageSize: 8 });
+      setTxPageData(
+        res.data || { content: [], pageNumber: 0, totalPages: 0, totalElements: 0, pageSize: 8 }
+      );
     } catch (err) {
       dispatch(
         showToast({
           type: 'error',
-          message: extractErrorMessage(err, 'Không thể tải lịch sử giao dịch của tài khoản.'),
+          message: extractErrorMessage(err, t('accounts.historyError')),
         })
       );
     } finally {
@@ -222,20 +250,20 @@ export default function AccountsPage() {
     <div className="space-y-6">
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="card-surface p-5">
-          <p className="text-xs font-medium text-slate-500">Tổng số dư đang hoạt động</p>
-          <p className="mt-2 text-2xl font-bold text-slate-900 tabular-nums">
+          <p className="text-xs font-medium text-slate-500 dark:text-slate-400">{t('accounts.totalActiveBalance')}</p>
+          <p className="mt-2 text-2xl font-bold text-slate-900 dark:text-white tabular-nums">
             {formatCurrency(summary?.totalActiveBalance, userCurrency)}
           </p>
         </div>
         <div className="card-surface p-5">
-          <p className="text-xs font-medium text-slate-500">Tài khoản đang hoạt động</p>
-          <p className="mt-2 text-2xl font-bold text-emerald-600 tabular-nums">
+          <p className="text-xs font-medium text-slate-500 dark:text-slate-400">{t('accounts.activeCount')}</p>
+          <p className="mt-2 text-2xl font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">
             {summary?.activeAccountCount ?? 0}
           </p>
         </div>
         <div className="card-surface p-5">
-          <p className="text-xs font-medium text-slate-500">Tài khoản đã lưu trữ</p>
-          <p className="mt-2 text-2xl font-bold text-slate-500 tabular-nums">
+          <p className="text-xs font-medium text-slate-500 dark:text-slate-400">{t('accounts.archivedCount')}</p>
+          <p className="mt-2 text-2xl font-bold text-slate-500 dark:text-slate-400 tabular-nums">
             {summary?.archivedAccountCount ?? 0}
           </p>
         </div>
@@ -244,9 +272,9 @@ export default function AccountsPage() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2">
           {[
-            { value: 'ALL', label: 'Tất cả' },
-            { value: 'ACTIVE', label: 'Đang hoạt động' },
-            { value: 'ARCHIVED', label: 'Đã lưu trữ' },
+            { value: 'ALL', label: t('common.all') },
+            { value: 'ACTIVE', label: t(ACCOUNT_STATUS_LABEL_KEYS.ACTIVE) },
+            { value: 'ARCHIVED', label: t(ACCOUNT_STATUS_LABEL_KEYS.ARCHIVED) },
           ].map((tab) => (
             <button
               key={tab.value}
@@ -254,8 +282,8 @@ export default function AccountsPage() {
               onClick={() => setStatusFilter(tab.value)}
               className={`px-3.5 py-2 rounded-xl text-xs font-semibold transition-colors ${
                 statusFilter === tab.value
-                  ? 'bg-slate-900 text-white'
-                  : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+                  ? 'bg-slate-900 dark:bg-emerald-600 text-white'
+                  : 'bg-white dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-zinc-900'
               }`}
             >
               {tab.label}
@@ -265,12 +293,12 @@ export default function AccountsPage() {
           <select
             value={typeFilter}
             onChange={(e) => setTypeFilter(e.target.value)}
-            className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-700 outline-none focus:border-emerald-500"
+            className="rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-3 py-2 text-xs font-medium text-slate-700 dark:text-slate-200 outline-none focus:border-emerald-500"
           >
-            <option value="ALL">Mọi loại tài khoản</option>
-            {ACCOUNT_TYPES.map((t) => (
-              <option key={t.value} value={t.value}>
-                {t.label}
+            <option value="ALL">{t('accounts.allTypes')}</option>
+            {ACCOUNT_TYPES.map((item) => (
+              <option key={item.value} value={item.value}>
+                {t(item.labelKey)}
               </option>
             ))}
           </select>
@@ -282,18 +310,18 @@ export default function AccountsPage() {
           className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 text-xs font-semibold transition-colors"
         >
           <PlusIcon className="h-4 w-4" />
-          Thêm tài khoản
+          {t('accounts.addAccount')}
         </button>
       </div>
 
       {loading ? (
-        <LoadingSpinner label="Đang tải danh sách tài khoản..." />
+        <LoadingSpinner label={t('accounts.loading')} />
       ) : !accounts.length ? (
         <div className="card-surface">
           <EmptyState
             icon={CreditCardIcon}
-            title="Chưa có tài khoản phù hợp"
-            description="Tạo ví tiền mặt, tài khoản ngân hàng hoặc tài khoản tiết kiệm để bắt đầu."
+            title={t('accounts.emptyTitle')}
+            description={t('accounts.emptyDesc')}
             action={
               <button
                 type="button"
@@ -301,7 +329,7 @@ export default function AccountsPage() {
                 className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 text-xs font-semibold"
               >
                 <PlusIcon className="h-4 w-4" />
-                Tạo tài khoản đầu tiên
+                {t('accounts.createFirst')}
               </button>
             }
           />
@@ -315,76 +343,80 @@ export default function AccountsPage() {
               <div
                 key={acc.id}
                 className={`card-surface p-5 flex flex-col justify-between transition-opacity ${
-                  isArchived ? 'opacity-75 bg-slate-50/70' : ''
+                  isArchived ? 'opacity-75 bg-slate-50/70 dark:bg-zinc-900/70' : ''
                 }`}
               >
                 <div>
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-center gap-3 min-w-0">
-                      <div className="h-10 w-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+                      <div className="h-10 w-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
                         <Icon className="h-5 w-5" />
                       </div>
                       <div className="min-w-0">
-                        <h3 className="text-sm font-bold text-slate-900 truncate">{acc.accountName}</h3>
-                        <p className="text-[11px] text-slate-500">
-                          {ACCOUNT_TYPE_LABELS[acc.accountType] || acc.accountType}
+                        <h3 className="text-sm font-bold text-slate-900 dark:text-white truncate">{acc.accountName}</h3>
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                          {ACCOUNT_TYPE_LABEL_KEYS[acc.accountType]
+                            ? t(ACCOUNT_TYPE_LABEL_KEYS[acc.accountType])
+                            : acc.accountType}
                         </p>
                       </div>
                     </div>
                     <span
                       className={`px-2 py-0.5 rounded-full text-[11px] font-medium border shrink-0 ${
                         isArchived
-                          ? 'bg-slate-100 text-slate-600 border-slate-200'
-                          : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                          ? 'bg-slate-100 text-slate-600 border-slate-200 dark:bg-zinc-900 dark:text-slate-400 dark:border-zinc-700'
+                          : 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800'
                       }`}
                     >
-                      {ACCOUNT_STATUS_LABELS[acc.status] || acc.status}
+                      {ACCOUNT_STATUS_LABEL_KEYS[acc.status]
+                        ? t(ACCOUNT_STATUS_LABEL_KEYS[acc.status])
+                        : acc.status}
                     </span>
                   </div>
 
-                  <div className="mt-4 pt-4 border-t border-slate-100">
-                    <p className="text-[11px] text-slate-500">Số dư hiện tại</p>
+                  <div className="mt-4 pt-4 border-t border-slate-100 dark:border-zinc-800">
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400">{t('accounts.currentBalance')}</p>
                     <p
                       className={`mt-0.5 text-xl font-bold tabular-nums ${
-                        Number(acc.currentBalance ?? 0) < 0 ? 'text-rose-600' : 'text-slate-900'
+                        Number(acc.currentBalance ?? 0) < 0 ? 'text-rose-600 dark:text-rose-400' : 'text-slate-900 dark:text-white'
                       }`}
                     >
                       {formatCurrency(acc.currentBalance, acc.currency)}
                     </p>
-                    <p className="text-[11px] text-slate-400 mt-1 tabular-nums">
-                      Số dư ban đầu: {formatCurrency(acc.initialBalance, acc.currency)}
-                      {acc.allowNegative && ' • Cho phép thấu chi'}
+                    <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-1 tabular-nums">
+                      {t('accounts.initialBalance')}: {formatCurrency(acc.initialBalance, acc.currency)}
+                      {acc.allowNegative && ` • ${t('accounts.allowOverdraft')}`}
                     </p>
                     {acc.description && (
-                      <p className="text-xs text-slate-600 mt-2 line-clamp-2">{acc.description}</p>
+                      <p className="text-xs text-slate-600 dark:text-slate-300 mt-2 line-clamp-2">{acc.description}</p>
                     )}
                   </div>
                 </div>
 
-                <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
+                <div className="mt-4 pt-3 border-t border-slate-100 dark:border-zinc-800 flex items-center justify-between gap-2">
                   <button
                     type="button"
                     onClick={() => loadAccountTransactions(acc, 0)}
-                    className="inline-flex items-center gap-1 text-xs font-semibold text-sky-600 hover:text-sky-700"
+                    className="inline-flex items-center gap-1 text-xs font-semibold text-sky-600 dark:text-sky-400 hover:text-sky-700 dark:hover:text-sky-300"
                   >
                     <ArrowsRightLeftIcon className="h-3.5 w-3.5" />
-                    Giao dịch
+                    {t('accounts.transactionsBtn')}
                   </button>
 
                   <div className="flex items-center gap-1">
                     <button
                       type="button"
                       onClick={() => openEditModal(acc)}
-                      className="p-1.5 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-100"
-                      title="Chỉnh sửa"
+                      className="p-1.5 rounded-lg text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-zinc-800"
+                      title={t('common.edit')}
                     >
                       <PencilSquareIcon className="h-4 w-4" />
                     </button>
                     <button
                       type="button"
                       onClick={() => handleToggleArchive(acc)}
-                      className="p-1.5 rounded-lg text-slate-500 hover:text-amber-700 hover:bg-amber-50"
-                      title={isArchived ? 'Khôi phục' : 'Lưu trữ'}
+                      className="p-1.5 rounded-lg text-slate-500 dark:text-slate-400 hover:text-amber-700 dark:hover:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/50"
+                      title={isArchived ? t('accounts.unarchiveTitle') : t('accounts.archiveTitle')}
                     >
                       {isArchived ? (
                         <ArchiveBoxXMarkIcon className="h-4 w-4" />
@@ -395,8 +427,8 @@ export default function AccountsPage() {
                     <button
                       type="button"
                       onClick={() => setDeleteTarget(acc)}
-                      className="p-1.5 rounded-lg text-slate-500 hover:text-rose-600 hover:bg-rose-50"
-                      title="Xóa"
+                      className="p-1.5 rounded-lg text-slate-500 dark:text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/50"
+                      title={t('common.delete')}
                     >
                       <TrashIcon className="h-4 w-4" />
                     </button>
@@ -411,38 +443,40 @@ export default function AccountsPage() {
       <Modal
         isOpen={modalOpen}
         onClose={() => setModalOpen(false)}
-        title={editingAccount ? 'Chỉnh sửa tài khoản' : 'Thêm tài khoản mới'}
-        subtitle="Thiết lập thông tin ví hoặc tài khoản ngân hàng của bạn."
+        title={editingAccount ? t('accounts.modalEditTitle') : t('accounts.modalCreateTitle')}
+        subtitle={t('accounts.modalSubtitle')}
       >
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-              Tên tài khoản <span className="text-rose-500">*</span>
+            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+              {t('accounts.nameLabel')} <span className="text-rose-500">*</span>
             </label>
             <input
               type="text"
-              placeholder="Ví dụ: Techcombank, Ví tiền mặt..."
+              placeholder={t('accounts.namePlaceholder')}
               {...register('accountName', {
-                required: 'Vui lòng nhập tên tài khoản',
-                maxLength: { value: 100, message: 'Tối đa 100 ký tự' },
+                required: t('accounts.nameRequired'),
+                maxLength: { value: 100, message: t('accounts.nameMax') },
               })}
-              className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-none"
+              className="w-full rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-900 dark:text-slate-100 px-3.5 py-2.5 text-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-none"
             />
             {errors.accountName && (
-              <p className="text-xs text-rose-600 mt-1">{errors.accountName.message}</p>
+              <p className="text-xs text-rose-600 dark:text-rose-400 mt-1">{errors.accountName.message}</p>
             )}
           </div>
 
           <div className="grid sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1.5">Loại tài khoản</label>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                {t('accounts.typeLabel')}
+              </label>
               <select
                 {...register('accountType', { required: true })}
-                className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm bg-white focus:border-emerald-500 outline-none"
+                className="w-full rounded-xl border border-slate-200 dark:border-zinc-800 px-3 py-2.5 text-sm bg-white dark:bg-zinc-900 text-slate-900 dark:text-slate-100 focus:border-emerald-500 outline-none"
               >
-                {ACCOUNT_TYPES.map((t) => (
-                  <option key={t.value} value={t.value}>
-                    {t.label}
+                {ACCOUNT_TYPES.map((item) => (
+                  <option key={item.value} value={item.value}>
+                    {t(item.labelKey)}
                   </option>
                 ))}
               </select>
@@ -450,10 +484,12 @@ export default function AccountsPage() {
 
             {!editingAccount && (
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1.5">Tiền tệ</label>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                  {t('accounts.currencyLabel')}
+                </label>
                 <select
                   {...register('currency')}
-                  className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm bg-white focus:border-emerald-500 outline-none"
+                  className="w-full rounded-xl border border-slate-200 dark:border-zinc-800 px-3 py-2.5 text-sm bg-white dark:bg-zinc-900 text-slate-900 dark:text-slate-100 focus:border-emerald-500 outline-none"
                 >
                   {CURRENCIES.map((c) => (
                     <option key={c.value} value={c.value}>
@@ -467,58 +503,60 @@ export default function AccountsPage() {
 
           {!editingAccount && (
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1.5">Số dư ban đầu</label>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                {t('accounts.initialBalanceLabel')}
+              </label>
               <input
                 type="number"
                 step="0.01"
                 {...register('initialBalance', {
-                  required: 'Vui lòng nhập số dư ban đầu',
+                  required: t('accounts.initialBalanceRequired'),
                   validate: (val) => {
                     const num = Number(val);
-                    if (Number.isNaN(num)) return 'Số dư không hợp lệ';
+                    if (Number.isNaN(num)) return t('accounts.invalidBalance');
                     if (num < 0 && watchedType !== 'BANK_ACCOUNT') {
-                      return 'Chỉ tài khoản ngân hàng mới được phép có số dư âm';
+                      return t('accounts.negativeBankOnly');
                     }
                     return true;
                   },
                 })}
-                className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm tabular-nums focus:border-emerald-500 outline-none"
+                className="w-full rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-900 dark:text-slate-100 px-3.5 py-2.5 text-sm tabular-nums focus:border-emerald-500 outline-none"
               />
               {errors.initialBalance && (
-                <p className="text-xs text-rose-600 mt-1">{errors.initialBalance.message}</p>
+                <p className="text-xs text-rose-600 dark:text-rose-400 mt-1">{errors.initialBalance.message}</p>
               )}
             </div>
           )}
 
-          <label className="flex items-start gap-2.5 rounded-xl border border-slate-200 p-3 cursor-pointer">
+          <label className="flex items-start gap-2.5 rounded-xl border border-slate-200 dark:border-zinc-800 p-3 cursor-pointer">
             <input
               type="checkbox"
               disabled={watchedType !== 'BANK_ACCOUNT'}
               {...register('allowNegative')}
-              className="mt-0.5 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 disabled:opacity-40"
+              className="mt-0.5 rounded border-slate-300 dark:border-zinc-700 text-emerald-600 focus:ring-emerald-500 disabled:opacity-40"
             />
             <div>
-              <span className="text-xs font-semibold text-slate-800 block">
-                Cho phép số dư âm (Thấu chi)
+              <span className="text-xs font-semibold text-slate-800 dark:text-slate-200 block">
+                {t('accounts.allowNegativeTitle')}
               </span>
-              <span className="text-[11px] text-slate-500">
-                Chỉ áp dụng cho loại Tài khoản ngân hàng.
-              </span>
+              <span className="text-[11px] text-slate-500 dark:text-slate-400">{t('accounts.allowNegativeDesc')}</span>
             </div>
           </label>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1.5">Mô tả</label>
+            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+              {t('accounts.descLabel')}
+            </label>
             <textarea
               rows={2}
-              placeholder="Ghi chú thêm về tài khoản..."
+              placeholder={t('accounts.descPlaceholder')}
               {...register('description', {
-                maxLength: { value: 255, message: 'Mô tả tối đa 255 ký tự' },
+                maxLength: { value: 255, message: t('accounts.descMax') },
               })}
-              className="w-full rounded-xl border border-slate-200 px-3.5 py-2 text-sm focus:border-emerald-500 outline-none"
+              className="w-full rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-900 dark:text-slate-100 px-3.5 py-2 text-sm focus:border-emerald-500 outline-none"
             />
             {errors.description && (
-              <p className="text-xs text-rose-600 mt-1">{errors.description.message}</p>
+              <p className="text-xs text-rose-600 dark:text-rose-400 mt-1">{errors.description.message}</p>
             )}
           </div>
 
@@ -526,16 +564,20 @@ export default function AccountsPage() {
             <button
               type="button"
               onClick={() => setModalOpen(false)}
-              className="px-4 py-2 rounded-xl border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+              className="px-4 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-zinc-800"
             >
-              Hủy
+              {t('common.cancel')}
             </button>
             <button
               type="submit"
               disabled={submitting}
               className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold disabled:opacity-60"
             >
-              {submitting ? 'Đang lưu...' : editingAccount ? 'Lưu thay đổi' : 'Tạo tài khoản'}
+              {submitting
+                ? t('common.saving')
+                : editingAccount
+                  ? t('accounts.saveBtn')
+                  : t('accounts.createBtn')}
             </button>
           </div>
         </form>
@@ -544,24 +586,26 @@ export default function AccountsPage() {
       <Modal
         isOpen={Boolean(txAccount)}
         onClose={() => setTxAccount(null)}
-        title={`Lịch sử giao dịch: ${txAccount?.accountName || ''}`}
+        title={t('accounts.historyTitle', { name: txAccount?.accountName || '' })}
         subtitle={
           txAccount
-            ? `Số dư hiện tại: ${formatCurrency(txAccount.currentBalance, txAccount.currency)}`
+            ? t('accounts.historySubtitle', {
+                balance: formatCurrency(txAccount.currentBalance, txAccount.currency),
+              })
             : ''
         }
         size="lg"
       >
         {txLoading ? (
-          <LoadingSpinner label="Đang tải giao dịch..." />
+          <LoadingSpinner label={t('accounts.historyLoading')} />
         ) : !txPageData.content?.length ? (
           <EmptyState
-            title="Tài khoản chưa có giao dịch"
-            description="Mọi giao dịch thu, chi hoặc chuyển khoản liên quan tới tài khoản này sẽ hiển thị tại đây."
+            title={t('accounts.historyEmptyTitle')}
+            description={t('accounts.historyEmptyDesc')}
           />
         ) : (
           <div className="space-y-2">
-            <div className="divide-y divide-slate-100">
+            <div className="divide-y divide-slate-100 dark:divide-zinc-800">
               {txPageData.content.map((tx) => {
                 const isIncomingTransfer =
                   tx.transactionType === 'TRANSFER' && tx.toAccountId === txAccount?.id;
@@ -570,16 +614,17 @@ export default function AccountsPage() {
                 return (
                   <div key={tx.id} className="py-3 flex items-center justify-between gap-3">
                     <div className="min-w-0">
-                      <p className="text-xs font-semibold text-slate-900 truncate">
-                        {tx.description || tx.categoryName || 'Chuyển khoản'}
+                      <p className="text-xs font-semibold text-slate-900 dark:text-white truncate">
+                        {tx.description || tx.categoryName || t('accounts.transferFallback')}
                       </p>
-                      <p className="text-[11px] text-slate-500">
-                        {typeInfo.label || tx.transactionType} • {formatDateTime(tx.transactionDate)}
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                        {typeInfo.labelKey ? t(typeInfo.labelKey) : tx.transactionType} •{' '}
+                        {formatDateTime(tx.transactionDate)}
                       </p>
                     </div>
                     <span
                       className={`text-xs font-bold tabular-nums shrink-0 ${
-                        isCredit ? 'text-emerald-600' : 'text-rose-600'
+                        isCredit ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'
                       }`}
                     >
                       {isCredit ? '+' : '-'}
@@ -605,11 +650,10 @@ export default function AccountsPage() {
         onClose={() => setDeleteTarget(null)}
         onConfirm={handleDeleteAccount}
         loading={deleting}
-        title="Xóa tài khoản"
-        message={`Bạn có chắc muốn xóa tài khoản "${deleteTarget?.accountName}"? Tài khoản chỉ có thể xóa nếu chưa có giao dịch phát sinh.`}
-        confirmLabel="Xóa tài khoản"
+        title={t('accounts.deleteConfirmTitle')}
+        message={t('accounts.deleteConfirmMsg', { name: deleteTarget?.accountName || '' })}
+        confirmLabel={t('accounts.deleteConfirmBtn')}
       />
     </div>
   );
 }
-

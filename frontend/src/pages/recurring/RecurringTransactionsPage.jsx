@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useForm } from 'react-hook-form';
 import {
@@ -21,11 +21,12 @@ import ConfirmDialog from '../../components/feedback/ConfirmDialog';
 import LoadingSpinner from '../../components/feedback/LoadingSpinner';
 import {
   RECURRING_FREQUENCIES,
-  RECURRING_FREQUENCY_LABELS,
+  RECURRING_FREQUENCY_LABEL_KEYS,
   RECURRING_STATUS_MAP,
   TRANSACTION_TYPE_MAP,
   TRANSACTION_TYPES,
 } from '../../constants/enums';
+import { useTranslation } from '../../i18n/I18nContext';
 import {
   extractErrorMessage,
   formatCurrency,
@@ -36,6 +37,10 @@ import {
 
 export default function RecurringTransactionsPage() {
   const dispatch = useDispatch();
+  const { t } = useTranslation();
+  const tRef = useRef(t);
+  tRef.current = t;
+
   const currency = useSelector((state) => state.auth.user?.currency || 'VND');
 
   const [loading, setLoading] = useState(true);
@@ -83,7 +88,7 @@ export default function RecurringTransactionsPage() {
       dispatch(
         showToast({
           type: 'error',
-          message: extractErrorMessage(err, 'Không thể tải danh sách giao dịch định kỳ.'),
+          message: extractErrorMessage(err, tRef.current('recurring.loadError')),
         })
       );
     } finally {
@@ -156,10 +161,10 @@ export default function RecurringTransactionsPage() {
 
       if (editingItem) {
         await recurringApi.updateRecurringTransaction(editingItem.id, payload);
-        dispatch(showToast({ type: 'success', message: 'Cập nhật lịch định kỳ thành công.' }));
+        dispatch(showToast({ type: 'success', message: t('recurring.updateSuccess') }));
       } else {
         await recurringApi.createRecurringTransaction(payload);
-        dispatch(showToast({ type: 'success', message: 'Tạo giao dịch định kỳ mới thành công.' }));
+        dispatch(showToast({ type: 'success', message: t('recurring.createSuccess') }));
       }
       setModalOpen(false);
       await loadData();
@@ -167,7 +172,7 @@ export default function RecurringTransactionsPage() {
       dispatch(
         showToast({
           type: 'error',
-          message: extractErrorMessage(err, 'Không thể lưu giao dịch định kỳ.'),
+          message: extractErrorMessage(err, t('recurring.saveError')),
         })
       );
     } finally {
@@ -179,17 +184,17 @@ export default function RecurringTransactionsPage() {
     try {
       if (item.status === 'ACTIVE') {
         await recurringApi.pauseRecurringTransaction(item.id);
-        dispatch(showToast({ type: 'success', message: 'Đã tạm dừng giao dịch định kỳ.' }));
+        dispatch(showToast({ type: 'success', message: t('recurring.pauseSuccess') }));
       } else if (item.status === 'PAUSED') {
         await recurringApi.resumeRecurringTransaction(item.id);
-        dispatch(showToast({ type: 'success', message: 'Đã kích hoạt lại giao dịch định kỳ.' }));
+        dispatch(showToast({ type: 'success', message: t('recurring.resumeSuccess') }));
       }
       await loadData();
     } catch (err) {
       dispatch(
         showToast({
           type: 'error',
-          message: extractErrorMessage(err, 'Không thể cập nhật trạng thái.'),
+          message: extractErrorMessage(err, t('recurring.statusError')),
         })
       );
     }
@@ -203,7 +208,7 @@ export default function RecurringTransactionsPage() {
       dispatch(
         showToast({
           type: 'success',
-          message: `Đã thực thi "${executeTarget.description}" và ghi nhận giao dịch mới.`,
+          message: t('recurring.executeSuccess', { description: executeTarget.description }),
         })
       );
       setExecuteTarget(null);
@@ -213,7 +218,7 @@ export default function RecurringTransactionsPage() {
       dispatch(
         showToast({
           type: 'error',
-          message: extractErrorMessage(err, 'Không thể thực thi giao dịch định kỳ.'),
+          message: extractErrorMessage(err, t('recurring.executeError')),
         })
       );
     } finally {
@@ -227,10 +232,10 @@ export default function RecurringTransactionsPage() {
     try {
       if (confirmTarget.type === 'CANCEL') {
         await recurringApi.cancelRecurringTransaction(confirmTarget.item.id);
-        dispatch(showToast({ type: 'success', message: 'Đã hủy lịch giao dịch định kỳ.' }));
+        dispatch(showToast({ type: 'success', message: t('recurring.cancelSuccess') }));
       } else {
         await recurringApi.deleteRecurringTransaction(confirmTarget.item.id);
-        dispatch(showToast({ type: 'success', message: 'Đã xóa lịch giao dịch định kỳ.' }));
+        dispatch(showToast({ type: 'success', message: t('recurring.deleteSuccess') }));
       }
       setConfirmTarget(null);
       await loadData();
@@ -238,7 +243,7 @@ export default function RecurringTransactionsPage() {
       dispatch(
         showToast({
           type: 'error',
-          message: extractErrorMessage(err, 'Không thể thực hiện thao tác.'),
+          message: extractErrorMessage(err, t('recurring.actionError')),
         })
       );
     } finally {
@@ -253,11 +258,11 @@ export default function RecurringTransactionsPage() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2">
           {[
-            { value: '', label: 'Tất cả' },
-            { value: 'ACTIVE', label: 'Đang chạy' },
-            { value: 'PAUSED', label: 'Tạm dừng' },
-            { value: 'COMPLETED', label: 'Hoàn tất' },
-            { value: 'CANCELLED', label: 'Đã hủy' },
+            { value: '', label: t('common.all') },
+            { value: 'ACTIVE', label: t(RECURRING_STATUS_MAP.ACTIVE.labelKey) },
+            { value: 'PAUSED', label: t(RECURRING_STATUS_MAP.PAUSED.labelKey) },
+            { value: 'COMPLETED', label: t(RECURRING_STATUS_MAP.COMPLETED.labelKey) },
+            { value: 'CANCELLED', label: t(RECURRING_STATUS_MAP.CANCELLED.labelKey) },
           ].map((tab) => (
             <button
               key={tab.value}
@@ -265,8 +270,8 @@ export default function RecurringTransactionsPage() {
               onClick={() => setStatusFilter(tab.value)}
               className={`px-3.5 py-2 rounded-xl text-xs font-semibold transition-colors ${
                 statusFilter === tab.value
-                  ? 'bg-slate-900 text-white'
-                  : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+                  ? 'bg-slate-900 dark:bg-emerald-600 text-white'
+                  : 'bg-white dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-zinc-900'
               }`}
             >
               {tab.label}
@@ -280,18 +285,18 @@ export default function RecurringTransactionsPage() {
           className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 text-xs font-semibold transition-colors"
         >
           <PlusIcon className="h-4 w-4" />
-          Thêm lịch định kỳ
+          {t('recurring.addRecurring')}
         </button>
       </div>
 
       {loading ? (
-        <LoadingSpinner label="Đang tải giao dịch định kỳ..." />
+        <LoadingSpinner label={t('recurring.loading')} />
       ) : !items.length ? (
         <div className="card-surface">
           <EmptyState
             icon={ArrowPathIcon}
-            title="Chưa có giao dịch định kỳ"
-            description="Tự động hóa tiền thuê nhà, hóa đơn điện nước, lương hàng tháng hoặc tiết kiệm định kỳ."
+            title={t('recurring.emptyTitle')}
+            description={t('recurring.emptyDesc')}
             action={
               <button
                 type="button"
@@ -299,7 +304,7 @@ export default function RecurringTransactionsPage() {
                 className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 text-xs font-semibold"
               >
                 <PlusIcon className="h-4 w-4" />
-                Tạo lịch định kỳ
+                {t('recurring.createFirst')}
               </button>
             }
           />
@@ -330,13 +335,14 @@ export default function RecurringTransactionsPage() {
                         />
                       </div>
                       <div className="min-w-0">
-                        <h3 className="text-sm font-bold text-slate-900 truncate">
+                        <h3 className="text-sm font-bold text-slate-900 dark:text-white truncate">
                           {item.description}
                         </h3>
-                        <p className="text-[11px] text-slate-500 truncate">
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
                           {item.accountName}
                           {item.toAccountName ? ` → ${item.toAccountName}` : ''} •{' '}
-                          {item.categoryName || typeInfo.label}
+                          {item.categoryName ||
+                            (typeInfo.labelKey ? t(typeInfo.labelKey) : item.transactionType)}
                         </p>
                       </div>
                     </div>
@@ -344,39 +350,41 @@ export default function RecurringTransactionsPage() {
                     <span
                       className={`px-2 py-0.5 rounded-full text-[11px] font-medium border shrink-0 ${statusInfo.badgeClass}`}
                     >
-                      {statusInfo.label}
+                      {t(statusInfo.labelKey)}
                     </span>
                   </div>
 
-                  <div className="flex flex-wrap items-baseline justify-between gap-2 pt-2 border-t border-slate-100">
+                  <div className="flex flex-wrap items-baseline justify-between gap-2 pt-2 border-t border-slate-100 dark:border-zinc-800">
                     <span
                       className={`text-lg font-bold tabular-nums ${
-                        isIncome ? 'text-emerald-600' : isExpense ? 'text-rose-600' : 'text-sky-600'
+                        isIncome ? 'text-emerald-600 dark:text-emerald-400' : isExpense ? 'text-rose-600 dark:text-rose-400' : 'text-sky-600 dark:text-sky-400'
                       }`}
                     >
                       {isIncome ? '+' : isExpense ? '-' : ''}
                       {formatCurrency(item.amount, currency)}
                     </span>
-                    <span className="text-xs font-medium text-slate-600 bg-slate-100 px-2.5 py-0.5 rounded-full">
-                      {RECURRING_FREQUENCY_LABELS[item.frequency] || item.frequency}
+                    <span className="text-xs font-medium text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-zinc-900 px-2.5 py-0.5 rounded-full">
+                      {RECURRING_FREQUENCY_LABEL_KEYS[item.frequency]
+                        ? t(RECURRING_FREQUENCY_LABEL_KEYS[item.frequency])
+                        : item.frequency}
                     </span>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-2 text-[11px] text-slate-500">
+                  <div className="grid grid-cols-2 gap-2 text-[11px] text-slate-500 dark:text-slate-400">
                     <div>
-                      Kỳ kế tiếp:{' '}
-                      <strong className="text-slate-700">{formatDate(item.nextExecutionDate)}</strong>
+                      {t('recurring.nextRun')}:{' '}
+                      <strong className="text-slate-700 dark:text-slate-200">{formatDate(item.nextExecutionDate)}</strong>
                     </div>
                     <div>
-                      Lần chạy cuối:{' '}
-                      <strong className="text-slate-700">
-                        {item.lastExecutedAt ? formatDateTime(item.lastExecutedAt) : 'Chưa chạy'}
+                      {t('recurring.lastRun')}:{' '}
+                      <strong className="text-slate-700 dark:text-slate-200">
+                        {item.lastExecutedAt ? formatDateTime(item.lastExecutedAt) : t('recurring.neverRun')}
                       </strong>
                     </div>
                   </div>
                 </div>
 
-                <div className="pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2">
+                <div className="pt-3 border-t border-slate-100 dark:border-zinc-800 flex flex-wrap items-center justify-between gap-2">
                   <div className="flex items-center gap-1.5">
                     {item.status === 'ACTIVE' && (
                       <button
@@ -385,27 +393,27 @@ export default function RecurringTransactionsPage() {
                           setAllowEarly(true);
                           setExecuteTarget(item);
                         }}
-                        className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 text-xs font-semibold"
+                        className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 text-xs font-semibold"
                       >
                         <PlayIcon className="h-3.5 w-3.5" />
-                        Thực thi ngay
+                        {t('recurring.executeNow')}
                       </button>
                     )}
                     {(item.status === 'ACTIVE' || item.status === 'PAUSED') && (
                       <button
                         type="button"
                         onClick={() => handleTogglePauseResume(item)}
-                        className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-amber-50 text-amber-700 hover:bg-amber-100 text-xs font-semibold"
+                        className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/60 text-xs font-semibold"
                       >
                         {item.status === 'ACTIVE' ? (
                           <>
                             <PauseIcon className="h-3.5 w-3.5" />
-                            Tạm dừng
+                            {t('recurring.pause')}
                           </>
                         ) : (
                           <>
                             <PlayIcon className="h-3.5 w-3.5" />
-                            Tiếp tục
+                            {t('recurring.resume')}
                           </>
                         )}
                       </button>
@@ -418,16 +426,16 @@ export default function RecurringTransactionsPage() {
                         <button
                           type="button"
                           onClick={() => openEditModal(item)}
-                          className="p-1.5 rounded-lg text-slate-400 hover:text-slate-800 hover:bg-slate-100"
-                          title="Chỉnh sửa"
+                          className="p-1.5 rounded-lg text-slate-400 hover:text-slate-800 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-zinc-800"
+                          title={t('common.edit')}
                         >
                           <PencilSquareIcon className="h-4 w-4" />
                         </button>
                         <button
                           type="button"
                           onClick={() => setConfirmTarget({ type: 'CANCEL', item })}
-                          className="p-1.5 rounded-lg text-slate-400 hover:text-amber-600 hover:bg-amber-50"
-                          title="Hủy lịch"
+                          className="p-1.5 rounded-lg text-slate-400 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/50"
+                          title={t('recurring.cancelRule')}
                         >
                           <NoSymbolIcon className="h-4 w-4" />
                         </button>
@@ -436,8 +444,8 @@ export default function RecurringTransactionsPage() {
                     <button
                       type="button"
                       onClick={() => setConfirmTarget({ type: 'DELETE', item })}
-                      className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50"
-                      title="Xóa"
+                      className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/50"
+                      title={t('common.delete')}
                     >
                       <TrashIcon className="h-4 w-4" />
                     </button>
@@ -452,55 +460,55 @@ export default function RecurringTransactionsPage() {
       <Modal
         isOpen={modalOpen}
         onClose={() => setModalOpen(false)}
-        title={editingItem ? 'Cập nhật giao dịch định kỳ' : 'Tạo giao dịch định kỳ mới'}
+        title={editingItem ? t('recurring.modalEditTitle') : t('recurring.modalCreateTitle')}
       >
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <div className="grid grid-cols-3 gap-2 p-1 rounded-xl bg-slate-100">
-            {TRANSACTION_TYPES.map((t) => (
+          <div className="grid grid-cols-3 gap-2 p-1 rounded-xl bg-slate-100 dark:bg-zinc-900">
+            {TRANSACTION_TYPES.map((item) => (
               <button
-                key={t.value}
+                key={item.value}
                 type="button"
-                onClick={() => handleTypeChange(t.value)}
+                onClick={() => handleTypeChange(item.value)}
                 className={`py-2 rounded-lg text-xs font-semibold transition-all ${
-                  watchedType === t.value
-                    ? 'bg-white text-slate-900 shadow-sm'
-                    : 'text-slate-500 hover:text-slate-800'
+                  watchedType === item.value
+                    ? 'bg-white dark:bg-zinc-800 text-slate-900 dark:text-white shadow-sm'
+                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white'
                 }`}
               >
-                {t.label}
+                {t(item.labelKey)}
               </button>
             ))}
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-              Mô tả <span className="text-rose-500">*</span>
+            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+              {t('recurring.descLabel')} <span className="text-rose-500">*</span>
             </label>
             <input
               type="text"
-              placeholder="Ví dụ: Tiền thuê nhà, Lương hàng tháng..."
+              placeholder={t('recurring.descPlaceholder')}
               {...register('description', {
-                required: 'Vui lòng nhập mô tả',
-                maxLength: { value: 255, message: 'Tối đa 255 ký tự' },
+                required: t('recurring.descRequired'),
+                maxLength: { value: 255, message: t('recurring.descMax') },
               })}
-              className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm outline-none focus:border-emerald-500"
+              className="w-full rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-900 dark:text-slate-100 px-3.5 py-2.5 text-sm outline-none focus:border-emerald-500"
             />
             {errors.description && (
-              <p className="text-xs text-rose-600 mt-1">{errors.description.message}</p>
+              <p className="text-xs text-rose-600 dark:text-rose-400 mt-1">{errors.description.message}</p>
             )}
           </div>
 
           <div className="grid sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                {watchedType === 'TRANSFER' ? 'Tài khoản nguồn' : 'Tài khoản'}{' '}
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                {watchedType === 'TRANSFER' ? t('recurring.sourceAccount') : t('recurring.account')}{' '}
                 <span className="text-rose-500">*</span>
               </label>
               <select
-                {...register('accountId', { required: 'Vui lòng chọn tài khoản' })}
-                className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm bg-white outline-none focus:border-emerald-500"
+                {...register('accountId', { required: t('recurring.accountRequired') })}
+                className="w-full rounded-xl border border-slate-200 dark:border-zinc-800 px-3 py-2.5 text-sm bg-white dark:bg-zinc-900 text-slate-900 dark:text-slate-100 outline-none focus:border-emerald-500"
               >
-                <option value="">Chọn tài khoản</option>
+                <option value="">{t('recurring.chooseAccount')}</option>
                 {accounts.map((acc) => (
                   <option key={acc.id} value={acc.id}>
                     {acc.accountName}
@@ -511,19 +519,19 @@ export default function RecurringTransactionsPage() {
 
             {watchedType === 'TRANSFER' ? (
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                  Tài khoản đích <span className="text-rose-500">*</span>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                  {t('recurring.targetAccount')} <span className="text-rose-500">*</span>
                 </label>
                 <select
                   {...register('toAccountId', {
                     validate: (val) =>
                       watchedType !== 'TRANSFER' ||
                       (Boolean(val) && val !== watchedAccountId) ||
-                      'Chọn tài khoản đích khác tài khoản nguồn',
+                      t('recurring.targetInvalid'),
                   })}
-                  className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm bg-white outline-none focus:border-emerald-500"
+                  className="w-full rounded-xl border border-slate-200 dark:border-zinc-800 px-3 py-2.5 text-sm bg-white dark:bg-zinc-900 text-slate-900 dark:text-slate-100 outline-none focus:border-emerald-500"
                 >
-                  <option value="">Chọn tài khoản đích</option>
+                  <option value="">{t('recurring.chooseTarget')}</option>
                   {accounts
                     .filter((a) => a.id !== watchedAccountId)
                     .map((acc) => (
@@ -533,22 +541,22 @@ export default function RecurringTransactionsPage() {
                     ))}
                 </select>
                 {errors.toAccountId && (
-                  <p className="text-xs text-rose-600 mt-1">{errors.toAccountId.message}</p>
+                  <p className="text-xs text-rose-600 dark:text-rose-400 mt-1">{errors.toAccountId.message}</p>
                 )}
               </div>
             ) : (
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                  Danh mục <span className="text-rose-500">*</span>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                  {t('recurring.category')} <span className="text-rose-500">*</span>
                 </label>
                 <select
                   {...register('categoryId', {
                     validate: (val) =>
-                      watchedType === 'TRANSFER' || Boolean(val) || 'Vui lòng chọn danh mục',
+                      watchedType === 'TRANSFER' || Boolean(val) || t('recurring.categoryRequired'),
                   })}
-                  className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm bg-white outline-none focus:border-emerald-500"
+                  className="w-full rounded-xl border border-slate-200 dark:border-zinc-800 px-3 py-2.5 text-sm bg-white dark:bg-zinc-900 text-slate-900 dark:text-slate-100 outline-none focus:border-emerald-500"
                 >
-                  <option value="">Chọn danh mục</option>
+                  <option value="">{t('recurring.chooseCategory')}</option>
                   {selectableCategories.map((c) => (
                     <option key={c.id} value={c.id}>
                       {c.name}
@@ -556,7 +564,7 @@ export default function RecurringTransactionsPage() {
                   ))}
                 </select>
                 {errors.categoryId && (
-                  <p className="text-xs text-rose-600 mt-1">{errors.categoryId.message}</p>
+                  <p className="text-xs text-rose-600 dark:text-rose-400 mt-1">{errors.categoryId.message}</p>
                 )}
               </div>
             )}
@@ -564,32 +572,34 @@ export default function RecurringTransactionsPage() {
 
           <div className="grid sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                Số tiền <span className="text-rose-500">*</span>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                {t('recurring.amount')} <span className="text-rose-500">*</span>
               </label>
               <input
                 type="number"
                 step="0.01"
                 {...register('amount', {
-                  required: 'Vui lòng nhập số tiền',
-                  min: { value: 0.01, message: 'Số tiền phải lớn hơn 0' },
+                  required: t('recurring.amountRequired'),
+                  min: { value: 0.01, message: t('recurring.amountMin') },
                 })}
-                className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm tabular-nums outline-none focus:border-emerald-500"
+                className="w-full rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-900 dark:text-slate-100 px-3.5 py-2.5 text-sm tabular-nums outline-none focus:border-emerald-500"
               />
               {errors.amount && (
-                <p className="text-xs text-rose-600 mt-1">{errors.amount.message}</p>
+                <p className="text-xs text-rose-600 dark:text-rose-400 mt-1">{errors.amount.message}</p>
               )}
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1.5">Chu kỳ lặp</label>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                {t('recurring.frequency')}
+              </label>
               <select
                 {...register('frequency')}
-                className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm bg-white outline-none focus:border-emerald-500"
+                className="w-full rounded-xl border border-slate-200 dark:border-zinc-800 px-3 py-2.5 text-sm bg-white dark:bg-zinc-900 text-slate-900 dark:text-slate-100 outline-none focus:border-emerald-500"
               >
                 {RECURRING_FREQUENCIES.map((f) => (
                   <option key={f.value} value={f.value}>
-                    {f.label}
+                    {t(f.labelKey)}
                   </option>
                 ))}
               </select>
@@ -598,27 +608,32 @@ export default function RecurringTransactionsPage() {
 
           <div className="grid sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1.5">Ngày bắt đầu</label>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                {t('recurring.startDate')}
+              </label>
               <input
                 type="date"
-                {...register('startDate', { required: 'Vui lòng chọn ngày bắt đầu' })}
-                className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-emerald-500"
+                {...register('startDate', { required: t('recurring.startDateRequired') })}
+                className="w-full rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-900 dark:text-slate-100 px-3 py-2.5 text-sm outline-none focus:border-emerald-500"
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                Ngày kết thúc (Tùy chọn)
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                {t('recurring.endDate')}
               </label>
               <input
                 type="date"
                 {...register('endDate', {
                   validate: (val) =>
-                    !val || !watchedStartDate || val >= watchedStartDate || 'Ngày kết thúc phải sau ngày bắt đầu',
+                    !val ||
+                    !watchedStartDate ||
+                    val >= watchedStartDate ||
+                    t('recurring.endDateAfterStart'),
                 })}
-                className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-emerald-500"
+                className="w-full rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-900 dark:text-slate-100 px-3 py-2.5 text-sm outline-none focus:border-emerald-500"
               />
               {errors.endDate && (
-                <p className="text-xs text-rose-600 mt-1">{errors.endDate.message}</p>
+                <p className="text-xs text-rose-600 dark:text-rose-400 mt-1">{errors.endDate.message}</p>
               )}
             </div>
           </div>
@@ -627,16 +642,20 @@ export default function RecurringTransactionsPage() {
             <button
               type="button"
               onClick={() => setModalOpen(false)}
-              className="px-4 py-2 rounded-xl border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+              className="px-4 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-zinc-800"
             >
-              Hủy
+              {t('common.cancel')}
             </button>
             <button
               type="submit"
               disabled={submitting}
               className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold disabled:opacity-60"
             >
-              {submitting ? 'Đang lưu...' : editingItem ? 'Lưu thay đổi' : 'Tạo lịch định kỳ'}
+              {submitting
+                ? t('common.saving')
+                : editingItem
+                  ? t('recurring.saveBtn')
+                  : t('recurring.createBtn')}
             </button>
           </div>
         </form>
@@ -645,28 +664,29 @@ export default function RecurringTransactionsPage() {
       <Modal
         isOpen={Boolean(executeTarget)}
         onClose={() => setExecuteTarget(null)}
-        title="Thực thi giao dịch định kỳ ngay"
+        title={t('recurring.executeModalTitle')}
         size="sm"
       >
         <div className="space-y-4">
-          <p className="text-xs text-slate-600 leading-relaxed">
-            Hệ thống sẽ tạo ngay một giao dịch cho{' '}
-            <strong className="text-slate-900">{executeTarget?.description}</strong> với số tiền{' '}
-            <strong className="text-slate-900">
+          <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+            {t('recurring.executeDescPrefix')}{' '}
+            <strong className="text-slate-900 dark:text-white">{executeTarget?.description}</strong>{' '}
+            {t('recurring.executeDescMid')}{' '}
+            <strong className="text-slate-900 dark:text-white">
               {formatCurrency(executeTarget?.amount, currency)}
             </strong>{' '}
-            và tự động tính kỳ chạy tiếp theo.
+            {t('recurring.executeDescSuffix')}
           </p>
 
-          <label className="flex items-start gap-2.5 rounded-xl border border-slate-200 p-3 cursor-pointer">
+          <label className="flex items-start gap-2.5 rounded-xl border border-slate-200 dark:border-zinc-800 p-3 cursor-pointer">
             <input
               type="checkbox"
               checked={allowEarly}
               onChange={(e) => setAllowEarly(e.target.checked)}
-              className="mt-0.5 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+              className="mt-0.5 rounded border-slate-300 dark:border-zinc-700 text-emerald-600 focus:ring-emerald-500"
             />
-            <span className="text-xs text-slate-700">
-              Cho phép thực thi trước ngày dự kiến ({formatDate(executeTarget?.nextExecutionDate)})
+            <span className="text-xs text-slate-700 dark:text-slate-200">
+              {t('recurring.allowEarlyLabel', { date: formatDate(executeTarget?.nextExecutionDate) })}
             </span>
           </label>
 
@@ -674,9 +694,9 @@ export default function RecurringTransactionsPage() {
             <button
               type="button"
               onClick={() => setExecuteTarget(null)}
-              className="px-4 py-2 rounded-xl border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+              className="px-4 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-zinc-800"
             >
-              Hủy
+              {t('common.cancel')}
             </button>
             <button
               type="button"
@@ -684,7 +704,7 @@ export default function RecurringTransactionsPage() {
               disabled={executing}
               className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold disabled:opacity-60"
             >
-              {executing ? 'Đang thực thi...' : 'Xác nhận thực thi'}
+              {executing ? t('recurring.executing') : t('recurring.confirmExecute')}
             </button>
           </div>
         </div>
@@ -696,15 +716,22 @@ export default function RecurringTransactionsPage() {
         onConfirm={handleConfirm}
         loading={processingConfirm}
         danger={confirmTarget?.type === 'DELETE'}
-        title={confirmTarget?.type === 'CANCEL' ? 'Hủy lịch định kỳ' : 'Xóa lịch định kỳ'}
+        title={
+          confirmTarget?.type === 'CANCEL' ? t('recurring.cancelTitle') : t('recurring.deleteTitle')
+        }
         message={
           confirmTarget?.type === 'CANCEL'
-            ? `Bạn có chắc muốn hủy lịch định kỳ "${confirmTarget?.item?.description}"?`
-            : `Bạn có chắc muốn xóa lịch định kỳ "${confirmTarget?.item?.description}"?`
+            ? t('recurring.cancelConfirmMsg', {
+                description: confirmTarget?.item?.description || '',
+              })
+            : t('recurring.deleteConfirmMsg', {
+                description: confirmTarget?.item?.description || '',
+              })
         }
-        confirmLabel={confirmTarget?.type === 'CANCEL' ? 'Hủy lịch' : 'Xóa'}
+        confirmLabel={
+          confirmTarget?.type === 'CANCEL' ? t('recurring.cancelRule') : t('common.delete')
+        }
       />
     </div>
   );
 }
-

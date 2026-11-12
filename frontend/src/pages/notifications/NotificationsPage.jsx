@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useDispatch } from 'react-redux';
 import { BellIcon, CheckCircleIcon, CheckIcon, TrashIcon } from '@heroicons/react/24/outline';
 import { notificationApi } from '../../services/notificationApi';
@@ -10,10 +10,14 @@ import { showToast } from '../../features/feedback/feedbackSlice';
 import EmptyState from '../../components/common/EmptyState';
 import Pagination from '../../components/common/Pagination';
 import LoadingSpinner from '../../components/feedback/LoadingSpinner';
+import { useTranslation } from '../../i18n/I18nContext';
 import { extractErrorMessage, formatDateTime } from '../../utils/formatters';
 
 export default function NotificationsPage() {
   const dispatch = useDispatch();
+  const { t } = useTranslation();
+  const tRef = useRef(t);
+  tRef.current = t;
 
   const [loading, setLoading] = useState(true);
   const [filterRead, setFilterRead] = useState('');
@@ -47,7 +51,7 @@ export default function NotificationsPage() {
       dispatch(
         showToast({
           type: 'error',
-          message: extractErrorMessage(err, 'Không thể tải danh sách thông báo.'),
+          message: extractErrorMessage(err, tRef.current('notifications.loadError')),
         })
       );
     } finally {
@@ -68,7 +72,7 @@ export default function NotificationsPage() {
       dispatch(
         showToast({
           type: 'error',
-          message: extractErrorMessage(err, 'Không thể đánh dấu đã đọc.'),
+          message: extractErrorMessage(err, t('notifications.markReadError')),
         })
       );
     }
@@ -77,14 +81,14 @@ export default function NotificationsPage() {
   const handleMarkAllRead = async () => {
     try {
       await notificationApi.markAllAsRead();
-      dispatch(showToast({ type: 'success', message: 'Đã đánh dấu tất cả thông báo là đã đọc.' }));
+      dispatch(showToast({ type: 'success', message: t('notifications.markAllReadSuccess') }));
       await loadNotifications();
       syncHeaderNotifications();
     } catch (err) {
       dispatch(
         showToast({
           type: 'error',
-          message: extractErrorMessage(err, 'Không thể đánh dấu đã đọc tất cả.'),
+          message: extractErrorMessage(err, t('notifications.markAllReadError')),
         })
       );
     }
@@ -93,14 +97,14 @@ export default function NotificationsPage() {
   const handleDelete = async (id) => {
     try {
       await notificationApi.deleteNotification(id);
-      dispatch(showToast({ type: 'success', message: 'Đã xóa thông báo.' }));
+      dispatch(showToast({ type: 'success', message: t('notifications.deleteSuccess') }));
       await loadNotifications();
       syncHeaderNotifications();
     } catch (err) {
       dispatch(
         showToast({
           type: 'error',
-          message: extractErrorMessage(err, 'Không thể xóa thông báo.'),
+          message: extractErrorMessage(err, t('notifications.deleteError')),
         })
       );
     }
@@ -111,9 +115,9 @@ export default function NotificationsPage() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           {[
-            { value: '', label: 'Tất cả' },
-            { value: 'UNREAD', label: 'Chưa đọc' },
-            { value: 'READ', label: 'Đã đọc' },
+            { value: '', label: t('common.all') },
+            { value: 'UNREAD', label: t('notifications.unread') },
+            { value: 'READ', label: t('notifications.read') },
           ].map((tab) => (
             <button
               key={tab.value}
@@ -124,8 +128,8 @@ export default function NotificationsPage() {
               }}
               className={`px-3.5 py-2 rounded-xl text-xs font-semibold transition-colors ${
                 filterRead === tab.value
-                  ? 'bg-slate-900 text-white'
-                  : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+                  ? 'bg-slate-900 dark:bg-emerald-600 text-white'
+                  : 'bg-white dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-zinc-900'
               }`}
             >
               {tab.label}
@@ -136,53 +140,53 @@ export default function NotificationsPage() {
         <button
           type="button"
           onClick={handleMarkAllRead}
-          className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 px-3.5 py-2 text-xs font-semibold text-slate-700"
+          className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 hover:bg-slate-50 dark:hover:bg-zinc-900 px-3.5 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200"
         >
-          <CheckIcon className="h-4 w-4 text-emerald-600" />
-          Đánh dấu tất cả đã đọc
+          <CheckIcon className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+          {t('notifications.markAllRead')}
         </button>
       </div>
 
       <div className="card-surface overflow-hidden">
         {loading ? (
-          <LoadingSpinner label="Đang tải thông báo..." />
+          <LoadingSpinner label={t('notifications.loading')} />
         ) : !pageData.content?.length ? (
           <EmptyState
             icon={BellIcon}
-            title="Không có thông báo"
-            description="Cảnh báo ngân sách, nhắc nhở định kỳ và tiến độ tiết kiệm sẽ xuất hiện tại đây."
+            title={t('notifications.emptyTitle')}
+            description={t('notifications.emptyDesc')}
           />
         ) : (
           <>
-            <div className="divide-y divide-slate-100">
+            <div className="divide-y divide-slate-100 dark:divide-zinc-800">
               {pageData.content.map((notif) => {
                 const isRead = notif.isRead ?? notif.read ?? false;
                 return (
                   <div
                     key={notif.id}
                     className={`p-4 sm:px-6 flex items-start justify-between gap-4 transition-colors ${
-                      isRead ? 'bg-white' : 'bg-emerald-50/40'
+                      isRead ? 'bg-white dark:bg-zinc-950' : 'bg-emerald-50/40 dark:bg-emerald-950/30'
                     }`}
                   >
                     <div className="flex items-start gap-3 min-w-0">
                       <span
                         className={`h-2.5 w-2.5 rounded-full mt-1.5 shrink-0 ${
-                          isRead ? 'bg-slate-300' : 'bg-emerald-500'
+                          isRead ? 'bg-slate-300 dark:bg-zinc-600' : 'bg-emerald-500'
                         }`}
                       />
                       <div className="min-w-0">
                         <div className="flex flex-wrap items-center gap-2">
-                          <h3 className="text-sm font-semibold text-slate-900">{notif.title}</h3>
+                          <h3 className="text-sm font-semibold text-slate-900 dark:text-white">{notif.title}</h3>
                           {(notif.notificationType || notif.type) && (
-                            <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-600 text-[10px] font-medium">
+                            <span className="px-2 py-0.5 rounded bg-slate-100 dark:bg-zinc-900 text-slate-600 dark:text-slate-300 text-[10px] font-medium">
                               {notif.notificationType || notif.type}
                             </span>
                           )}
                         </div>
-                        <p className="text-xs text-slate-600 mt-1 leading-relaxed">
+                        <p className="text-xs text-slate-600 dark:text-slate-300 mt-1 leading-relaxed">
                           {notif.message}
                         </p>
-                        <p className="text-[11px] text-slate-400 mt-1.5">
+                        <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-1.5">
                           {formatDateTime(notif.createdAt)}
                         </p>
                       </div>
@@ -193,8 +197,8 @@ export default function NotificationsPage() {
                         <button
                           type="button"
                           onClick={() => handleMarkAsRead(notif.id)}
-                          className="p-1.5 rounded-lg text-emerald-600 hover:bg-emerald-100"
-                          title="Đánh dấu đã đọc"
+                          className="p-1.5 rounded-lg text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-950/60"
+                          title={t('notifications.markReadBtn')}
                         >
                           <CheckCircleIcon className="h-4 w-4" />
                         </button>
@@ -202,8 +206,8 @@ export default function NotificationsPage() {
                       <button
                         type="button"
                         onClick={() => handleDelete(notif.id)}
-                        className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50"
-                        title="Xóa thông báo"
+                        className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/50"
+                        title={t('notifications.deleteBtn')}
                       >
                         <TrashIcon className="h-4 w-4" />
                       </button>

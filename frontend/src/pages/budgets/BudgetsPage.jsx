@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useForm } from 'react-hook-form';
 import { ChartPieIcon, PencilSquareIcon, PlusIcon, TrashIcon } from '@heroicons/react/24/outline';
@@ -11,10 +11,15 @@ import Modal from '../../components/common/Modal';
 import ConfirmDialog from '../../components/feedback/ConfirmDialog';
 import LoadingSpinner from '../../components/feedback/LoadingSpinner';
 import { BUDGET_ALERT_MAP } from '../../constants/enums';
+import { useTranslation } from '../../i18n/I18nContext';
 import { extractErrorMessage, formatCurrency } from '../../utils/formatters';
 
 export default function BudgetsPage() {
   const dispatch = useDispatch();
+  const { t } = useTranslation();
+  const tRef = useRef(t);
+  tRef.current = t;
+
   const currency = useSelector((state) => state.auth.user?.currency || 'VND');
 
   const now = new Date();
@@ -51,7 +56,7 @@ export default function BudgetsPage() {
       dispatch(
         showToast({
           type: 'error',
-          message: extractErrorMessage(err, 'Không thể tải ngân sách tháng.'),
+          message: extractErrorMessage(err, tRef.current('budgets.loadError')),
         })
       );
     } finally {
@@ -92,7 +97,7 @@ export default function BudgetsPage() {
         await budgetApi.updateBudget(editingBudget.id, {
           limitAmount: Number(values.limitAmount),
         });
-        dispatch(showToast({ type: 'success', message: 'Cập nhật hạn mức ngân sách thành công.' }));
+        dispatch(showToast({ type: 'success', message: t('budgets.updateSuccess') }));
       } else {
         await budgetApi.createBudget({
           categoryId: values.categoryId,
@@ -100,7 +105,7 @@ export default function BudgetsPage() {
           year,
           limitAmount: Number(values.limitAmount),
         });
-        dispatch(showToast({ type: 'success', message: 'Thiết lập ngân sách mới thành công.' }));
+        dispatch(showToast({ type: 'success', message: t('budgets.createSuccess') }));
       }
       setModalOpen(false);
       await loadData();
@@ -108,7 +113,7 @@ export default function BudgetsPage() {
       dispatch(
         showToast({
           type: 'error',
-          message: extractErrorMessage(err, 'Không thể lưu ngân sách.'),
+          message: extractErrorMessage(err, t('budgets.saveError')),
         })
       );
     } finally {
@@ -121,14 +126,14 @@ export default function BudgetsPage() {
     setDeleting(true);
     try {
       await budgetApi.deleteBudget(deleteTarget.id);
-      dispatch(showToast({ type: 'success', message: 'Đã xóa ngân sách.' }));
+      dispatch(showToast({ type: 'success', message: t('budgets.deleteSuccess') }));
       setDeleteTarget(null);
       await loadData();
     } catch (err) {
       dispatch(
         showToast({
           type: 'error',
-          message: extractErrorMessage(err, 'Không thể xóa ngân sách.'),
+          message: extractErrorMessage(err, t('budgets.deleteError')),
         })
       );
     } finally {
@@ -145,11 +150,11 @@ export default function BudgetsPage() {
           <select
             value={month}
             onChange={(e) => setMonth(Number(e.target.value))}
-            className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-700 outline-none"
+            className="rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-3 py-2 text-xs font-medium text-slate-700 dark:text-slate-200 outline-none"
           >
             {Array.from({ length: 12 }, (_, idx) => idx + 1).map((m) => (
               <option key={m} value={m}>
-                Tháng {m}
+                {t('dashboard.monthOption', { m })}
               </option>
             ))}
           </select>
@@ -157,11 +162,11 @@ export default function BudgetsPage() {
           <select
             value={year}
             onChange={(e) => setYear(Number(e.target.value))}
-            className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-700 outline-none"
+            className="rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-3 py-2 text-xs font-medium text-slate-700 dark:text-slate-200 outline-none"
           >
             {years.map((y) => (
               <option key={y} value={y}>
-                Năm {y}
+                {t('dashboard.yearOption', { y })}
               </option>
             ))}
           </select>
@@ -173,49 +178,49 @@ export default function BudgetsPage() {
           className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 text-xs font-semibold transition-colors"
         >
           <PlusIcon className="h-4 w-4" />
-          Thiết lập ngân sách
+          {t('budgets.addBudget')}
         </button>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="card-surface p-5">
-          <p className="text-xs font-medium text-slate-500">Tổng hạn mức</p>
-          <p className="mt-2 text-xl font-bold text-slate-900 tabular-nums">
+          <p className="text-xs font-medium text-slate-500 dark:text-slate-400">{t('budgets.totalLimit')}</p>
+          <p className="mt-2 text-xl font-bold text-slate-900 dark:text-white tabular-nums">
             {formatCurrency(summary?.totalLimitAmount, currency)}
           </p>
         </div>
         <div className="card-surface p-5">
-          <p className="text-xs font-medium text-slate-500">Đã chi tiêu</p>
-          <p className="mt-2 text-xl font-bold text-rose-600 tabular-nums">
+          <p className="text-xs font-medium text-slate-500 dark:text-slate-400">{t('budgets.totalSpent')}</p>
+          <p className="mt-2 text-xl font-bold text-rose-600 dark:text-rose-400 tabular-nums">
             {formatCurrency(summary?.totalSpentAmount, currency)}
           </p>
         </div>
         <div className="card-surface p-5">
-          <p className="text-xs font-medium text-slate-500">Còn lại</p>
+          <p className="text-xs font-medium text-slate-500 dark:text-slate-400">{t('budgets.remaining')}</p>
           <p
             className={`mt-2 text-xl font-bold tabular-nums ${
-              Number(summary?.totalRemainingAmount ?? 0) < 0 ? 'text-rose-600' : 'text-emerald-600'
+              Number(summary?.totalRemainingAmount ?? 0) < 0 ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400'
             }`}
           >
             {formatCurrency(summary?.totalRemainingAmount, currency)}
           </p>
         </div>
         <div className="card-surface p-5">
-          <p className="text-xs font-medium text-slate-500">Tỷ lệ sử dụng</p>
-          <p className="mt-2 text-xl font-bold text-slate-900 tabular-nums">
+          <p className="text-xs font-medium text-slate-500 dark:text-slate-400">{t('budgets.usageRate')}</p>
+          <p className="mt-2 text-xl font-bold text-slate-900 dark:text-white tabular-nums">
             {Number(summary?.overallUsagePercentage ?? 0).toFixed(1)}%
           </p>
         </div>
       </div>
 
       {loading ? (
-        <LoadingSpinner label="Đang tải ngân sách..." />
+        <LoadingSpinner label={t('budgets.loading')} />
       ) : !budgets.length ? (
         <div className="card-surface">
           <EmptyState
             icon={ChartPieIcon}
-            title={`Chưa có ngân sách tháng ${month}/${year}`}
-            description="Đặt hạn mức chi tiêu theo từng danh mục để nhận cảnh báo sớm khi gần chạm ngưỡng."
+            title={t('budgets.emptyTitle', { month, year })}
+            description={t('budgets.emptyDesc')}
             action={
               <button
                 type="button"
@@ -223,7 +228,7 @@ export default function BudgetsPage() {
                 className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 text-xs font-semibold"
               >
                 <PlusIcon className="h-4 w-4" />
-                Tạo ngân sách tháng {month}
+                {t('budgets.createForMonth', { month })}
               </button>
             }
           />
@@ -248,11 +253,11 @@ export default function BudgetsPage() {
                       />
                     </div>
                     <div className="min-w-0">
-                      <h3 className="text-sm font-bold text-slate-900 truncate">{b.categoryName}</h3>
+                      <h3 className="text-sm font-bold text-slate-900 dark:text-white truncate">{b.categoryName}</h3>
                       <span
                         className={`inline-block mt-1 px-2 py-0.5 rounded-full text-[11px] font-medium border ${alert.badgeClass}`}
                       >
-                        {alert.label}
+                        {t(alert.labelKey)}
                       </span>
                     </div>
                   </div>
@@ -261,16 +266,16 @@ export default function BudgetsPage() {
                     <button
                       type="button"
                       onClick={() => openEditModal(b)}
-                      className="p-1.5 rounded-lg text-slate-400 hover:text-slate-800 hover:bg-slate-100"
-                      title="Sửa hạn mức"
+                      className="p-1.5 rounded-lg text-slate-400 hover:text-slate-800 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-zinc-800"
+                      title={t('budgets.editLimit')}
                     >
                       <PencilSquareIcon className="h-4 w-4" />
                     </button>
                     <button
                       type="button"
                       onClick={() => setDeleteTarget(b)}
-                      className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50"
-                      title="Xóa"
+                      className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/50"
+                      title={t('common.delete')}
                     >
                       <TrashIcon className="h-4 w-4" />
                     </button>
@@ -279,28 +284,32 @@ export default function BudgetsPage() {
 
                 <div>
                   <div className="flex justify-between text-xs mb-1.5 tabular-nums">
-                    <span className="text-slate-600">
-                      Đã chi:{' '}
-                      <strong className="text-slate-900">{formatCurrency(b.spentAmount, currency)}</strong>
+                    <span className="text-slate-600 dark:text-slate-400">
+                      {t('budgets.spent')}:{' '}
+                      <strong className="text-slate-900 dark:text-white">{formatCurrency(b.spentAmount, currency)}</strong>
                     </span>
-                    <span className="text-slate-600">
-                      Hạn mức:{' '}
-                      <strong className="text-slate-900">{formatCurrency(b.limitAmount, currency)}</strong>
+                    <span className="text-slate-600 dark:text-slate-400">
+                      {t('budgets.limit')}:{' '}
+                      <strong className="text-slate-900 dark:text-white">{formatCurrency(b.limitAmount, currency)}</strong>
                     </span>
                   </div>
-                  <div className="h-2.5 w-full rounded-full bg-slate-100 overflow-hidden">
+                  <div className="h-2.5 w-full rounded-full bg-slate-100 dark:bg-zinc-800 overflow-hidden">
                     <div
                       className={`h-full rounded-full transition-all ${alert.barClass}`}
                       style={{ width: `${pct}%` }}
                     />
                   </div>
-                  <div className="flex justify-between text-[11px] text-slate-500 mt-1.5 tabular-nums">
-                    <span>Sử dụng: {Number(b.usagePercentage ?? 0).toFixed(1)}%</span>
+                  <div className="flex justify-between text-[11px] text-slate-500 dark:text-slate-400 mt-1.5 tabular-nums">
                     <span>
-                      {Number(b.remainingAmount ?? 0) >= 0 ? 'Còn lại: ' : 'Vượt mức: '}
+                      {t('budgets.usage')}: {Number(b.usagePercentage ?? 0).toFixed(1)}%
+                    </span>
+                    <span>
+                      {Number(b.remainingAmount ?? 0) >= 0
+                        ? `${t('budgets.remainingLabel')}: `
+                        : `${t('budgets.exceededLabel')}: `}
                       <strong
                         className={
-                          Number(b.remainingAmount ?? 0) >= 0 ? 'text-emerald-600' : 'text-rose-600'
+                          Number(b.remainingAmount ?? 0) >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'
                         }
                       >
                         {formatCurrency(Math.abs(Number(b.remainingAmount ?? 0)), currency)}
@@ -319,48 +328,48 @@ export default function BudgetsPage() {
         onClose={() => setModalOpen(false)}
         title={
           editingBudget
-            ? `Cập nhật hạn mức: ${editingBudget.categoryName}`
-            : `Thiết lập ngân sách tháng ${month}/${year}`
+            ? t('budgets.modalEditTitle', { name: editingBudget.categoryName })
+            : t('budgets.modalCreateTitle', { month, year })
         }
       >
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           {!editingBudget && (
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                Danh mục chi tiêu <span className="text-rose-500">*</span>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                {t('budgets.expenseCategory')} <span className="text-rose-500">*</span>
               </label>
               <select
-                {...register('categoryId', { required: 'Vui lòng chọn danh mục' })}
-                className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm bg-white outline-none focus:border-emerald-500"
+                {...register('categoryId', { required: t('budgets.categoryRequired') })}
+                className="w-full rounded-xl border border-slate-200 dark:border-zinc-800 px-3 py-2.5 text-sm bg-white dark:bg-zinc-900 text-slate-900 dark:text-slate-100 outline-none focus:border-emerald-500"
               >
                 {expenseCategories.map((c) => (
                   <option key={c.id} value={c.id} disabled={usedCategoryIds.has(c.id)}>
-                    {c.name} {usedCategoryIds.has(c.id) ? '(Đã có ngân sách)' : ''}
+                    {c.name} {usedCategoryIds.has(c.id) ? t('budgets.alreadyBudgeted') : ''}
                   </option>
                 ))}
               </select>
               {errors.categoryId && (
-                <p className="text-xs text-rose-600 mt-1">{errors.categoryId.message}</p>
+                <p className="text-xs text-rose-600 dark:text-rose-400 mt-1">{errors.categoryId.message}</p>
               )}
             </div>
           )}
 
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-              Hạn mức chi tiêu <span className="text-rose-500">*</span>
+            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+              {t('budgets.limitLabel')} <span className="text-rose-500">*</span>
             </label>
             <input
               type="number"
               step="0.01"
-              placeholder="Ví dụ: 5000000"
+              placeholder={t('budgets.limitPlaceholder')}
               {...register('limitAmount', {
-                required: 'Vui lòng nhập hạn mức',
-                min: { value: 0.01, message: 'Hạn mức phải lớn hơn 0' },
+                required: t('budgets.limitRequired'),
+                min: { value: 0.01, message: t('budgets.limitMin') },
               })}
-              className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm tabular-nums outline-none focus:border-emerald-500"
+              className="w-full rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-900 dark:text-slate-100 px-3.5 py-2.5 text-sm tabular-nums outline-none focus:border-emerald-500"
             />
             {errors.limitAmount && (
-              <p className="text-xs text-rose-600 mt-1">{errors.limitAmount.message}</p>
+              <p className="text-xs text-rose-600 dark:text-rose-400 mt-1">{errors.limitAmount.message}</p>
             )}
           </div>
 
@@ -368,16 +377,20 @@ export default function BudgetsPage() {
             <button
               type="button"
               onClick={() => setModalOpen(false)}
-              className="px-4 py-2 rounded-xl border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+              className="px-4 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-zinc-800"
             >
-              Hủy
+              {t('common.cancel')}
             </button>
             <button
               type="submit"
               disabled={submitting}
               className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold disabled:opacity-60"
             >
-              {submitting ? 'Đang lưu...' : editingBudget ? 'Cập nhật' : 'Tạo ngân sách'}
+              {submitting
+                ? t('common.saving')
+                : editingBudget
+                  ? t('common.update')
+                  : t('budgets.createBtn')}
             </button>
           </div>
         </form>
@@ -388,11 +401,10 @@ export default function BudgetsPage() {
         onClose={() => setDeleteTarget(null)}
         onConfirm={handleDelete}
         loading={deleting}
-        title="Xóa ngân sách"
-        message={`Bạn có chắc muốn xóa ngân sách cho danh mục "${deleteTarget?.categoryName}"?`}
-        confirmLabel="Xóa"
+        title={t('budgets.deleteTitle')}
+        message={t('budgets.deleteConfirmMsg', { name: deleteTarget?.categoryName || '' })}
+        confirmLabel={t('common.delete')}
       />
     </div>
   );
 }
-

@@ -1,6 +1,8 @@
 const ACCESS_TOKEN_KEY = 'pfm_access_token';
 const REFRESH_TOKEN_KEY = 'pfm_refresh_token';
 const USER_KEY = 'pfm_user';
+const LANGUAGE_KEY = 'pfm_language';
+const THEME_KEY = 'pfm_theme';
 
 export const storage = {
   getAccessToken() {
@@ -30,5 +32,18 @@ export const storage = {
     localStorage.removeItem(REFRESH_TOKEN_KEY);
     localStorage.removeItem(USER_KEY);
   },
+  getLanguage() {
+    const saved = localStorage.getItem(LANGUAGE_KEY);
+    return saved === 'en' ? 'en' : 'vi';
+  },
+  setLanguage(lang) {
+    localStorage.setItem(LANGUAGE_KEY, lang === 'en' ? 'en' : 'vi');
+  },
+  getTheme() {
+    const saved = localStorage.getItem(THEME_KEY);
+    return saved === 'dark' ? 'dark' : 'light';
+  },
+  setTheme(theme) {
+    localStorage.setItem(THEME_KEY, theme === 'dark' ? 'dark' : 'light');
+  },
 };
-

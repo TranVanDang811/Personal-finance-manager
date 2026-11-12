@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useForm } from 'react-hook-form';
 import {
@@ -20,6 +20,7 @@ import EmptyState from '../../components/common/EmptyState';
 import ConfirmDialog from '../../components/feedback/ConfirmDialog';
 import LoadingSpinner from '../../components/feedback/LoadingSpinner';
 import { HEX_COLOR_PALETTE, SAVING_GOAL_STATUS_MAP } from '../../constants/enums';
+import { useTranslation } from '../../i18n/I18nContext';
 import {
   dateTimeLocalToIso,
   extractErrorMessage,
@@ -32,6 +33,10 @@ import {
 
 export default function SavingGoalsPage() {
   const dispatch = useDispatch();
+  const { t } = useTranslation();
+  const tRef = useRef(t);
+  tRef.current = t;
+
   const currency = useSelector((state) => state.auth.user?.currency || 'VND');
 
   const [loading, setLoading] = useState(true);
@@ -76,7 +81,7 @@ export default function SavingGoalsPage() {
       dispatch(
         showToast({
           type: 'error',
-          message: extractErrorMessage(err, 'Không thể tải mục tiêu tiết kiệm.'),
+          message: extractErrorMessage(err, tRef.current('savings.loadError')),
         })
       );
     } finally {
@@ -128,10 +133,10 @@ export default function SavingGoalsPage() {
 
       if (editingGoal) {
         await savingGoalApi.updateSavingGoal(editingGoal.id, payload);
-        dispatch(showToast({ type: 'success', message: 'Cập nhật mục tiêu thành công.' }));
+        dispatch(showToast({ type: 'success', message: t('savings.updateSuccess') }));
       } else {
         await savingGoalApi.createSavingGoal(payload);
-        dispatch(showToast({ type: 'success', message: 'Tạo mục tiêu tiết kiệm mới thành công.' }));
+        dispatch(showToast({ type: 'success', message: t('savings.createSuccess') }));
       }
       setGoalModalOpen(false);
       await loadData();
@@ -139,7 +144,7 @@ export default function SavingGoalsPage() {
       dispatch(
         showToast({
           type: 'error',
-          message: extractErrorMessage(err, 'Không thể lưu mục tiêu tiết kiệm.'),
+          message: extractErrorMessage(err, t('savings.saveError')),
         })
       );
     } finally {
@@ -170,10 +175,10 @@ export default function SavingGoalsPage() {
 
       if (contribModal.mode === 'DEPOSIT') {
         await savingGoalApi.deposit(contribModal.goal.id, payload);
-        dispatch(showToast({ type: 'success', message: 'Nạp tiền vào mục tiêu thành công.' }));
+        dispatch(showToast({ type: 'success', message: t('savings.depositSuccess') }));
       } else {
         await savingGoalApi.withdraw(contribModal.goal.id, payload);
-        dispatch(showToast({ type: 'success', message: 'Rút tiền từ mục tiêu thành công.' }));
+        dispatch(showToast({ type: 'success', message: t('savings.withdrawSuccess') }));
       }
 
       setContribModal({ open: false, mode: 'DEPOSIT', goal: null });
@@ -182,7 +187,7 @@ export default function SavingGoalsPage() {
       dispatch(
         showToast({
           type: 'error',
-          message: extractErrorMessage(err, 'Giao dịch mục tiêu không thành công.'),
+          message: extractErrorMessage(err, t('savings.contribError')),
         })
       );
     } finally {
@@ -202,7 +207,7 @@ export default function SavingGoalsPage() {
       dispatch(
         showToast({
           type: 'error',
-          message: extractErrorMessage(err, 'Không thể tải lịch sử đóng góp.'),
+          message: extractErrorMessage(err, t('savings.historyError')),
         })
       );
     } finally {
@@ -216,10 +221,10 @@ export default function SavingGoalsPage() {
     try {
       if (confirmAction.type === 'CANCEL') {
         await savingGoalApi.cancelSavingGoal(confirmAction.goal.id);
-        dispatch(showToast({ type: 'success', message: 'Đã hủy mục tiêu tiết kiệm.' }));
+        dispatch(showToast({ type: 'success', message: t('savings.cancelSuccess') }));
       } else {
         await savingGoalApi.deleteSavingGoal(confirmAction.goal.id);
-        dispatch(showToast({ type: 'success', message: 'Đã xóa mục tiêu tiết kiệm.' }));
+        dispatch(showToast({ type: 'success', message: t('savings.deleteSuccess') }));
       }
       setConfirmAction(null);
       await loadData();
@@ -227,7 +232,7 @@ export default function SavingGoalsPage() {
       dispatch(
         showToast({
           type: 'error',
-          message: extractErrorMessage(err, 'Không thể thực hiện thao tác.'),
+          message: extractErrorMessage(err, t('savings.actionError')),
         })
       );
     } finally {
@@ -240,10 +245,10 @@ export default function SavingGoalsPage() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2">
           {[
-            { value: '', label: 'Tất cả' },
-            { value: 'IN_PROGRESS', label: 'Đang thực hiện' },
-            { value: 'COMPLETED', label: 'Hoàn thành' },
-            { value: 'CANCELLED', label: 'Đã hủy' },
+            { value: '', label: t('common.all') },
+            { value: 'IN_PROGRESS', label: t(SAVING_GOAL_STATUS_MAP.IN_PROGRESS.labelKey) },
+            { value: 'COMPLETED', label: t(SAVING_GOAL_STATUS_MAP.COMPLETED.labelKey) },
+            { value: 'CANCELLED', label: t(SAVING_GOAL_STATUS_MAP.CANCELLED.labelKey) },
           ].map((tab) => (
             <button
               key={tab.value}
@@ -251,8 +256,8 @@ export default function SavingGoalsPage() {
               onClick={() => setStatusFilter(tab.value)}
               className={`px-3.5 py-2 rounded-xl text-xs font-semibold transition-colors ${
                 statusFilter === tab.value
-                  ? 'bg-slate-900 text-white'
-                  : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+                  ? 'bg-slate-900 dark:bg-emerald-600 text-white'
+                  : 'bg-white dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-zinc-900'
               }`}
             >
               {tab.label}
@@ -266,18 +271,18 @@ export default function SavingGoalsPage() {
           className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 text-xs font-semibold transition-colors"
         >
           <PlusIcon className="h-4 w-4" />
-          Tạo mục tiêu
+          {t('savings.addGoal')}
         </button>
       </div>
 
       {loading ? (
-        <LoadingSpinner label="Đang tải mục tiêu tiết kiệm..." />
+        <LoadingSpinner label={t('savings.loading')} />
       ) : !goals.length ? (
         <div className="card-surface">
           <EmptyState
             icon={BanknotesIcon}
-            title="Chưa có mục tiêu tiết kiệm"
-            description="Thiết lập quỹ dự phòng, du lịch hoặc mua sắm để theo dõi tiến độ tích lũy."
+            title={t('savings.emptyTitle')}
+            description={t('savings.emptyDesc')}
             action={
               <button
                 type="button"
@@ -285,7 +290,7 @@ export default function SavingGoalsPage() {
                 className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 text-xs font-semibold"
               >
                 <PlusIcon className="h-4 w-4" />
-                Tạo mục tiêu đầu tiên
+                {t('savings.createFirst')}
               </button>
             }
           />
@@ -308,40 +313,42 @@ export default function SavingGoalsPage() {
                         style={{ backgroundColor: goal.color || '#0EA5E9' }}
                       />
                       <div className="min-w-0">
-                        <h3 className="text-sm font-bold text-slate-900 truncate">{goal.name}</h3>
-                        <p className="text-[11px] text-slate-500">
-                          Bắt đầu: {formatDate(goal.startDate)}
-                          {goal.targetDate ? ` • Hạn: ${formatDate(goal.targetDate)}` : ''}
+                        <h3 className="text-sm font-bold text-slate-900 dark:text-white truncate">{goal.name}</h3>
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                          {t('savings.startLabel')}: {formatDate(goal.startDate)}
+                          {goal.targetDate
+                            ? ` • ${t('savings.deadlineShort')}: ${formatDate(goal.targetDate)}`
+                            : ''}
                         </p>
                       </div>
                     </div>
                     <span
                       className={`px-2 py-0.5 rounded-full text-[11px] font-medium border shrink-0 ${statusInfo.badgeClass}`}
                     >
-                      {statusInfo.label}
+                      {t(statusInfo.labelKey)}
                     </span>
                   </div>
 
                   {goal.description && (
-                    <p className="text-xs text-slate-600 line-clamp-2">{goal.description}</p>
+                    <p className="text-xs text-slate-600 dark:text-slate-300 line-clamp-2">{goal.description}</p>
                   )}
 
                   <div>
                     <div className="flex justify-between text-xs mb-1.5 tabular-nums">
-                      <span className="text-slate-600">
-                        Hiện có:{' '}
-                        <strong className="text-slate-900">
+                      <span className="text-slate-600 dark:text-slate-400">
+                        {t('savings.currentLabel')}:{' '}
+                        <strong className="text-slate-900 dark:text-white">
                           {formatCurrency(goal.currentAmount, currency)}
                         </strong>
                       </span>
-                      <span className="text-slate-600">
-                        Mục tiêu:{' '}
-                        <strong className="text-slate-900">
+                      <span className="text-slate-600 dark:text-slate-400">
+                        {t('savings.targetLabel')}:{' '}
+                        <strong className="text-slate-900 dark:text-white">
                           {formatCurrency(goal.targetAmount, currency)}
                         </strong>
                       </span>
                     </div>
-                    <div className="h-2.5 w-full rounded-full bg-slate-100 overflow-hidden">
+                    <div className="h-2.5 w-full rounded-full bg-slate-100 dark:bg-zinc-800 overflow-hidden">
                       <div
                         className="h-full rounded-full transition-all"
                         style={{
@@ -350,42 +357,46 @@ export default function SavingGoalsPage() {
                         }}
                       />
                     </div>
-                    <div className="flex justify-between text-[11px] text-slate-500 mt-1.5 tabular-nums">
-                      <span>Tiến độ: {Number(goal.progressPercentage ?? 0).toFixed(1)}%</span>
-                      <span>Còn thiếu: {formatCurrency(goal.remainingAmount, currency)}</span>
+                    <div className="flex justify-between text-[11px] text-slate-500 dark:text-slate-400 mt-1.5 tabular-nums">
+                      <span>
+                        {t('savings.progress')}: {Number(goal.progressPercentage ?? 0).toFixed(1)}%
+                      </span>
+                      <span>
+                        {t('savings.stillNeeded')}: {formatCurrency(goal.remainingAmount, currency)}
+                      </span>
                     </div>
                   </div>
                 </div>
 
-                <div className="pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2">
+                <div className="pt-3 border-t border-slate-100 dark:border-zinc-800 flex flex-wrap items-center justify-between gap-2">
                   <div className="flex items-center gap-1.5">
                     {canDeposit && (
                       <button
                         type="button"
                         onClick={() => openContribModal('DEPOSIT', goal)}
-                        className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 text-xs font-semibold"
+                        className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 text-xs font-semibold"
                       >
                         <ArrowDownTrayIcon className="h-3.5 w-3.5" />
-                        Nạp tiền
+                        {t('savings.deposit')}
                       </button>
                     )}
                     {canWithdraw && (
                       <button
                         type="button"
                         onClick={() => openContribModal('WITHDRAW', goal)}
-                        className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-amber-50 text-amber-700 hover:bg-amber-100 text-xs font-semibold"
+                        className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/60 text-xs font-semibold"
                       >
                         <ArrowUpTrayIcon className="h-3.5 w-3.5" />
-                        Rút tiền
+                        {t('savings.withdraw')}
                       </button>
                     )}
                     <button
                       type="button"
                       onClick={() => loadHistory(goal, 0)}
-                      className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 text-xs font-medium"
+                      className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-100 dark:bg-zinc-900 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-zinc-800 text-xs font-medium"
                     >
                       <ClockIcon className="h-3.5 w-3.5" />
-                      Lịch sử
+                      {t('savings.history')}
                     </button>
                   </div>
 
@@ -395,16 +406,16 @@ export default function SavingGoalsPage() {
                         <button
                           type="button"
                           onClick={() => openEditModal(goal)}
-                          className="p-1.5 rounded-lg text-slate-400 hover:text-slate-800 hover:bg-slate-100"
-                          title="Chỉnh sửa"
+                          className="p-1.5 rounded-lg text-slate-400 hover:text-slate-800 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-zinc-800"
+                          title={t('common.edit')}
                         >
                           <PencilSquareIcon className="h-4 w-4" />
                         </button>
                         <button
                           type="button"
                           onClick={() => setConfirmAction({ type: 'CANCEL', goal })}
-                          className="p-1.5 rounded-lg text-slate-400 hover:text-amber-600 hover:bg-amber-50"
-                          title="Hủy mục tiêu"
+                          className="p-1.5 rounded-lg text-slate-400 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/50"
+                          title={t('savings.cancelGoal')}
                         >
                           <NoSymbolIcon className="h-4 w-4" />
                         </button>
@@ -413,8 +424,8 @@ export default function SavingGoalsPage() {
                     <button
                       type="button"
                       onClick={() => setConfirmAction({ type: 'DELETE', goal })}
-                      className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50"
-                      title="Xóa"
+                      className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/50"
+                      title={t('common.delete')}
                     >
                       <TrashIcon className="h-4 w-4" />
                     </button>
@@ -429,42 +440,42 @@ export default function SavingGoalsPage() {
       <Modal
         isOpen={goalModalOpen}
         onClose={() => setGoalModalOpen(false)}
-        title={editingGoal ? 'Cập nhật mục tiêu tiết kiệm' : 'Tạo mục tiêu tiết kiệm'}
+        title={editingGoal ? t('savings.modalEditTitle') : t('savings.modalCreateTitle')}
       >
         <form onSubmit={goalForm.handleSubmit(onSubmitGoal)} className="space-y-4">
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-              Tên mục tiêu <span className="text-rose-500">*</span>
+            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+              {t('savings.nameLabel')} <span className="text-rose-500">*</span>
             </label>
             <input
               type="text"
-              placeholder="Ví dụ: Quỹ khẩn cấp 6 tháng, Mua xe..."
+              placeholder={t('savings.namePlaceholder')}
               {...goalForm.register('name', {
-                required: 'Vui lòng nhập tên mục tiêu',
-                maxLength: { value: 120, message: 'Tối đa 120 ký tự' },
+                required: t('savings.nameRequired'),
+                maxLength: { value: 120, message: t('savings.nameMax') },
               })}
-              className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm outline-none focus:border-emerald-500"
+              className="w-full rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-900 dark:text-slate-100 px-3.5 py-2.5 text-sm outline-none focus:border-emerald-500"
             />
             {goalForm.formState.errors.name && (
-              <p className="text-xs text-rose-600 mt-1">{goalForm.formState.errors.name.message}</p>
+              <p className="text-xs text-rose-600 dark:text-rose-400 mt-1">{goalForm.formState.errors.name.message}</p>
             )}
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-              Số tiền mục tiêu <span className="text-rose-500">*</span>
+            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+              {t('savings.targetAmountLabel')} <span className="text-rose-500">*</span>
             </label>
             <input
               type="number"
               step="0.01"
               {...goalForm.register('targetAmount', {
-                required: 'Vui lòng nhập số tiền mục tiêu',
-                min: { value: 0.01, message: 'Số tiền mục tiêu phải lớn hơn 0' },
+                required: t('savings.targetAmountRequired'),
+                min: { value: 0.01, message: t('savings.targetAmountMin') },
               })}
-              className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm tabular-nums outline-none focus:border-emerald-500"
+              className="w-full rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-900 dark:text-slate-100 px-3.5 py-2.5 text-sm tabular-nums outline-none focus:border-emerald-500"
             />
             {goalForm.formState.errors.targetAmount && (
-              <p className="text-xs text-rose-600 mt-1">
+              <p className="text-xs text-rose-600 dark:text-rose-400 mt-1">
                 {goalForm.formState.errors.targetAmount.message}
               </p>
             )}
@@ -472,35 +483,37 @@ export default function SavingGoalsPage() {
 
           <div className="grid sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1.5">Ngày bắt đầu</label>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                {t('savings.startDateLabel')}
+              </label>
               <input
                 type="date"
-                {...goalForm.register('startDate', { required: 'Vui lòng chọn ngày bắt đầu' })}
-                className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-emerald-500"
+                {...goalForm.register('startDate', { required: t('savings.startDateRequired') })}
+                className="w-full rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-900 dark:text-slate-100 px-3 py-2.5 text-sm outline-none focus:border-emerald-500"
               />
               {goalForm.formState.errors.startDate && (
-                <p className="text-xs text-rose-600 mt-1">
+                <p className="text-xs text-rose-600 dark:text-rose-400 mt-1">
                   {goalForm.formState.errors.startDate.message}
                 </p>
               )}
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                Hạn hoàn thành <span className="text-rose-500">*</span>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                {t('savings.deadlineLabel')} <span className="text-rose-500">*</span>
               </label>
               <input
                 type="date"
                 {...goalForm.register('targetDate', {
-                  required: 'Vui lòng chọn ngày dự kiến hoàn thành',
+                  required: t('savings.deadlineRequired'),
                   validate: (val) => {
                     const start = goalForm.getValues('startDate');
-                    return !start || val >= start || 'Hạn hoàn thành phải sau ngày bắt đầu';
+                    return !start || val >= start || t('savings.deadlineAfterStart');
                   },
                 })}
-                className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-emerald-500"
+                className="w-full rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-900 dark:text-slate-100 px-3 py-2.5 text-sm outline-none focus:border-emerald-500"
               />
               {goalForm.formState.errors.targetDate && (
-                <p className="text-xs text-rose-600 mt-1">
+                <p className="text-xs text-rose-600 dark:text-rose-400 mt-1">
                   {goalForm.formState.errors.targetDate.message}
                 </p>
               )}
@@ -508,7 +521,9 @@ export default function SavingGoalsPage() {
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-2">Màu nhận diện</label>
+            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-2">
+              {t('savings.colorLabel')}
+            </label>
             <div className="flex flex-wrap gap-2">
               {HEX_COLOR_PALETTE.map((hex) => (
                 <button
@@ -517,7 +532,7 @@ export default function SavingGoalsPage() {
                   onClick={() => goalForm.setValue('color', hex)}
                   className={`h-7 w-7 rounded-full border-2 ${
                     selectedColor?.toUpperCase() === hex.toUpperCase()
-                      ? 'border-slate-900 scale-110'
+                      ? 'border-slate-900 dark:border-white scale-110'
                       : 'border-transparent'
                   }`}
                   style={{ backgroundColor: hex }}
@@ -527,11 +542,13 @@ export default function SavingGoalsPage() {
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1.5">Mô tả</label>
+            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+              {t('savings.descLabel')}
+            </label>
             <textarea
               rows={2}
               {...goalForm.register('description')}
-              className="w-full rounded-xl border border-slate-200 px-3.5 py-2 text-sm outline-none focus:border-emerald-500"
+              className="w-full rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-900 dark:text-slate-100 px-3.5 py-2 text-sm outline-none focus:border-emerald-500"
             />
           </div>
 
@@ -539,16 +556,20 @@ export default function SavingGoalsPage() {
             <button
               type="button"
               onClick={() => setGoalModalOpen(false)}
-              className="px-4 py-2 rounded-xl border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+              className="px-4 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-zinc-800"
             >
-              Hủy
+              {t('common.cancel')}
             </button>
             <button
               type="submit"
               disabled={submittingGoal}
               className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold disabled:opacity-60"
             >
-              {submittingGoal ? 'Đang lưu...' : editingGoal ? 'Lưu thay đổi' : 'Tạo mục tiêu'}
+              {submittingGoal
+                ? t('common.saving')
+                : editingGoal
+                  ? t('savings.saveBtn')
+                  : t('savings.createBtn')}
             </button>
           </div>
         </form>
@@ -559,26 +580,26 @@ export default function SavingGoalsPage() {
         onClose={() => setContribModal({ open: false, mode: 'DEPOSIT', goal: null })}
         title={
           contribModal.mode === 'DEPOSIT'
-            ? `Nạp tiền vào "${contribModal.goal?.name || ''}"`
-            : `Rút tiền từ "${contribModal.goal?.name || ''}"`
+            ? t('savings.depositTitle', { name: contribModal.goal?.name || '' })
+            : t('savings.withdrawTitle', { name: contribModal.goal?.name || '' })
         }
         subtitle={
           contribModal.mode === 'DEPOSIT'
-            ? 'Số tiền sẽ được trừ từ tài khoản nguồn bạn chọn.'
-            : 'Số tiền rút sẽ được hoàn về tài khoản bạn chọn.'
+            ? t('savings.depositSubtitle')
+            : t('savings.withdrawSubtitle')
         }
       >
         <form onSubmit={contribForm.handleSubmit(onSubmitContrib)} className="space-y-4">
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-              {contribModal.mode === 'DEPOSIT' ? 'Từ tài khoản' : 'Hoàn về tài khoản'}{' '}
+            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+              {contribModal.mode === 'DEPOSIT' ? t('savings.fromAccount') : t('savings.toAccount')}{' '}
               <span className="text-rose-500">*</span>
             </label>
             <select
-              {...contribForm.register('accountId', { required: 'Vui lòng chọn tài khoản' })}
-              className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm bg-white outline-none focus:border-emerald-500"
+              {...contribForm.register('accountId', { required: t('savings.accountRequired') })}
+              className="w-full rounded-xl border border-slate-200 dark:border-zinc-800 px-3 py-2.5 text-sm bg-white dark:bg-zinc-900 text-slate-900 dark:text-slate-100 outline-none focus:border-emerald-500"
             >
-              <option value="">Chọn tài khoản</option>
+              <option value="">{t('savings.chooseAccount')}</option>
               {accounts.map((acc) => (
                 <option key={acc.id} value={acc.id}>
                   {acc.accountName} ({formatCurrency(acc.currentBalance, acc.currency)})
@@ -586,7 +607,7 @@ export default function SavingGoalsPage() {
               ))}
             </select>
             {contribForm.formState.errors.accountId && (
-              <p className="text-xs text-rose-600 mt-1">
+              <p className="text-xs text-rose-600 dark:text-rose-400 mt-1">
                 {contribForm.formState.errors.accountId.message}
               </p>
             )}
@@ -594,42 +615,46 @@ export default function SavingGoalsPage() {
 
           <div className="grid sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                Số tiền <span className="text-rose-500">*</span>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                {t('savings.amountLabel')} <span className="text-rose-500">*</span>
               </label>
               <input
                 type="number"
                 step="0.01"
                 {...contribForm.register('amount', {
-                  required: 'Vui lòng nhập số tiền',
-                  min: { value: 0.01, message: 'Số tiền phải lớn hơn 0' },
+                  required: t('savings.amountRequired'),
+                  min: { value: 0.01, message: t('savings.amountMin') },
                 })}
-                className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm tabular-nums outline-none focus:border-emerald-500"
+                className="w-full rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-900 dark:text-slate-100 px-3.5 py-2.5 text-sm tabular-nums outline-none focus:border-emerald-500"
               />
               {contribForm.formState.errors.amount && (
-                <p className="text-xs text-rose-600 mt-1">
+                <p className="text-xs text-rose-600 dark:text-rose-400 mt-1">
                   {contribForm.formState.errors.amount.message}
                 </p>
               )}
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1.5">Thời gian</label>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                {t('savings.timeLabel')}
+              </label>
               <input
                 type="datetime-local"
                 {...contribForm.register('contributionDate')}
-                className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-emerald-500"
+                className="w-full rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-900 dark:text-slate-100 px-3 py-2.5 text-sm outline-none focus:border-emerald-500"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1.5">Ghi chú</label>
+            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+              {t('savings.noteLabel')}
+            </label>
             <input
               type="text"
-              placeholder="Ví dụ: Trích lương tháng này"
+              placeholder={t('savings.notePlaceholder')}
               {...contribForm.register('note')}
-              className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm outline-none focus:border-emerald-500"
+              className="w-full rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-900 dark:text-slate-100 px-3.5 py-2.5 text-sm outline-none focus:border-emerald-500"
             />
           </div>
 
@@ -637,9 +662,9 @@ export default function SavingGoalsPage() {
             <button
               type="button"
               onClick={() => setContribModal({ open: false, mode: 'DEPOSIT', goal: null })}
-              className="px-4 py-2 rounded-xl border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+              className="px-4 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-zinc-800"
             >
-              Hủy
+              {t('common.cancel')}
             </button>
             <button
               type="submit"
@@ -651,10 +676,10 @@ export default function SavingGoalsPage() {
               }`}
             >
               {submittingContrib
-                ? 'Đang xử lý...'
+                ? t('common.processing')
                 : contribModal.mode === 'DEPOSIT'
-                  ? 'Xác nhận nạp tiền'
-                  : 'Xác nhận rút tiền'}
+                  ? t('savings.confirmDeposit')
+                  : t('savings.confirmWithdraw')}
             </button>
           </div>
         </form>
@@ -663,36 +688,36 @@ export default function SavingGoalsPage() {
       <Modal
         isOpen={Boolean(historyGoal)}
         onClose={() => setHistoryGoal(null)}
-        title={`Lịch sử đóng góp: ${historyGoal?.name || ''}`}
+        title={t('savings.historyTitle', { name: historyGoal?.name || '' })}
         size="lg"
       >
         {historyLoading ? (
-          <LoadingSpinner label="Đang tải lịch sử..." />
+          <LoadingSpinner label={t('savings.historyLoading')} />
         ) : !historyData.content?.length ? (
           <EmptyState
-            title="Chưa có lịch sử đóng góp"
-            description="Thực hiện nạp hoặc rút tiền để ghi nhận lịch sử cho mục tiêu này."
+            title={t('savings.historyEmptyTitle')}
+            description={t('savings.historyEmptyDesc')}
           />
         ) : (
           <div>
-            <div className="divide-y divide-slate-100">
+            <div className="divide-y divide-slate-100 dark:divide-zinc-800">
               {historyData.content.map((item) => {
                 const isDeposit = (item.contributionType || item.type) === 'DEPOSIT';
                 return (
                   <div key={item.id} className="py-3 flex items-center justify-between gap-3">
                     <div className="min-w-0">
-                      <p className="text-xs font-semibold text-slate-900">
-                        {isDeposit ? 'Nạp vào mục tiêu' : 'Rút từ mục tiêu'}
+                      <p className="text-xs font-semibold text-slate-900 dark:text-white">
+                        {isDeposit ? t('savings.historyDeposit') : t('savings.historyWithdraw')}
                         {item.accountName ? ` • ${item.accountName}` : ''}
                       </p>
-                      <p className="text-[11px] text-slate-500">
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400">
                         {formatDateTime(item.contributionDate || item.createdAt)}
                         {item.note ? ` • ${item.note}` : ''}
                       </p>
                     </div>
                     <span
                       className={`text-xs font-bold tabular-nums shrink-0 ${
-                        isDeposit ? 'text-emerald-600' : 'text-amber-600'
+                        isDeposit ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'
                       }`}
                     >
                       {isDeposit ? '+' : '-'}
@@ -719,13 +744,17 @@ export default function SavingGoalsPage() {
         onConfirm={handleConfirmAction}
         loading={processingConfirm}
         danger={confirmAction?.type === 'DELETE'}
-        title={confirmAction?.type === 'CANCEL' ? 'Hủy mục tiêu tiết kiệm' : 'Xóa mục tiêu tiết kiệm'}
+        title={
+          confirmAction?.type === 'CANCEL' ? t('savings.cancelTitle') : t('savings.deleteTitle')
+        }
         message={
           confirmAction?.type === 'CANCEL'
-            ? `Bạn có chắc muốn hủy mục tiêu "${confirmAction?.goal?.name}"?`
-            : `Bạn có chắc muốn xóa vĩnh viễn mục tiêu "${confirmAction?.goal?.name}"?`
+            ? t('savings.cancelConfirmMsg', { name: confirmAction?.goal?.name || '' })
+            : t('savings.deleteConfirmMsg', { name: confirmAction?.goal?.name || '' })
         }
-        confirmLabel={confirmAction?.type === 'CANCEL' ? 'Hủy mục tiêu' : 'Xóa'}
+        confirmLabel={
+          confirmAction?.type === 'CANCEL' ? t('savings.cancelGoal') : t('common.delete')
+        }
       />
     </div>
   );

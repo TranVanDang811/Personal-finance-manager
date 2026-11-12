@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useDispatch } from 'react-redux';
 import { useForm } from 'react-hook-form';
 import { LockClosedIcon, PencilSquareIcon, PlusIcon, TagIcon, TrashIcon } from '@heroicons/react/24/outline';
@@ -14,10 +14,15 @@ import {
   CATEGORY_TYPES,
   HEX_COLOR_PALETTE,
 } from '../../constants/enums';
+import { useTranslation } from '../../i18n/I18nContext';
 import { extractErrorMessage } from '../../utils/formatters';
 
 export default function CategoriesPage() {
   const dispatch = useDispatch();
+  const { t } = useTranslation();
+  const tRef = useRef(t);
+  tRef.current = t;
+
   const [loading, setLoading] = useState(true);
   const [categories, setCategories] = useState([]);
   const [activeTab, setActiveTab] = useState('ALL');
@@ -50,7 +55,7 @@ export default function CategoriesPage() {
       dispatch(
         showToast({
           type: 'error',
-          message: extractErrorMessage(err, 'Không thể tải danh mục.'),
+          message: extractErrorMessage(err, tRef.current('categories.loadError')),
         })
       );
     } finally {
@@ -93,7 +98,7 @@ export default function CategoriesPage() {
           icon: values.icon,
           color: values.color,
         });
-        dispatch(showToast({ type: 'success', message: 'Cập nhật danh mục thành công.' }));
+        dispatch(showToast({ type: 'success', message: t('categories.updateSuccess') }));
       } else {
         await categoryApi.createCategory({
           name: values.name.trim(),
@@ -101,7 +106,7 @@ export default function CategoriesPage() {
           icon: values.icon,
           color: values.color,
         });
-        dispatch(showToast({ type: 'success', message: 'Tạo danh mục mới thành công.' }));
+        dispatch(showToast({ type: 'success', message: t('categories.createSuccess') }));
       }
       setModalOpen(false);
       await loadCategories();
@@ -109,7 +114,7 @@ export default function CategoriesPage() {
       dispatch(
         showToast({
           type: 'error',
-          message: extractErrorMessage(err, 'Không thể lưu danh mục.'),
+          message: extractErrorMessage(err, t('categories.saveError')),
         })
       );
     } finally {
@@ -122,14 +127,19 @@ export default function CategoriesPage() {
     setDeleting(true);
     try {
       await categoryApi.deleteCategory(deleteTarget.id);
-      dispatch(showToast({ type: 'success', message: `Đã xóa danh mục "${deleteTarget.name}".` }));
+      dispatch(
+        showToast({
+          type: 'success',
+          message: t('categories.deleteSuccess', { name: deleteTarget.name }),
+        })
+      );
       setDeleteTarget(null);
       await loadCategories();
     } catch (err) {
       dispatch(
         showToast({
           type: 'error',
-          message: extractErrorMessage(err, 'Không thể xóa danh mục.'),
+          message: extractErrorMessage(err, t('categories.deleteError')),
         })
       );
     } finally {
@@ -146,9 +156,9 @@ export default function CategoriesPage() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           {[
-            { value: 'ALL', label: 'Tất cả danh mục' },
-            { value: 'EXPENSE', label: 'Chi tiêu' },
-            { value: 'INCOME', label: 'Thu nhập' },
+            { value: 'ALL', label: t('categories.allTab') },
+            { value: 'EXPENSE', label: t('enums.categoryTypes.EXPENSE') },
+            { value: 'INCOME', label: t('enums.categoryTypes.INCOME') },
           ].map((tab) => (
             <button
               key={tab.value}
@@ -156,8 +166,8 @@ export default function CategoriesPage() {
               onClick={() => setActiveTab(tab.value)}
               className={`px-3.5 py-2 rounded-xl text-xs font-semibold transition-colors ${
                 activeTab === tab.value
-                  ? 'bg-slate-900 text-white'
-                  : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+                  ? 'bg-slate-900 dark:bg-emerald-600 text-white'
+                  : 'bg-white dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-zinc-900'
               }`}
             >
               {tab.label}
@@ -171,18 +181,18 @@ export default function CategoriesPage() {
           className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 text-xs font-semibold transition-colors"
         >
           <PlusIcon className="h-4 w-4" />
-          Thêm danh mục
+          {t('categories.addCategory')}
         </button>
       </div>
 
       {loading ? (
-        <LoadingSpinner label="Đang tải danh mục..." />
+        <LoadingSpinner label={t('categories.loading')} />
       ) : !filtered.length ? (
         <div className="card-surface">
           <EmptyState
             icon={TagIcon}
-            title="Chưa có danh mục"
-            description="Tạo danh mục tùy chỉnh để phân loại giao dịch thu chi rõ ràng hơn."
+            title={t('categories.emptyTitle')}
+            description={t('categories.emptyDesc')}
           />
         </div>
       ) : (
@@ -208,20 +218,20 @@ export default function CategoriesPage() {
                   </div>
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
-                      <h3 className="text-sm font-semibold text-slate-900 truncate">{cat.name}</h3>
+                      <h3 className="text-sm font-semibold text-slate-900 dark:text-white truncate">{cat.name}</h3>
                       {isSystem && (
-                        <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-slate-100 text-slate-500 text-[10px] font-medium shrink-0">
+                        <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-slate-100 dark:bg-zinc-900 text-slate-500 dark:text-slate-400 text-[10px] font-medium shrink-0">
                           <LockClosedIcon className="h-3 w-3" />
-                          Hệ thống
+                          {t('categories.systemBadge')}
                         </span>
                       )}
                     </div>
                     <span
                       className={`inline-block mt-1 text-[11px] font-medium ${
-                        isIncome ? 'text-emerald-600' : 'text-rose-600'
+                        isIncome ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'
                       }`}
                     >
-                      {isIncome ? 'Thu nhập' : 'Chi tiêu'}
+                      {isIncome ? t('enums.categoryTypes.INCOME') : t('enums.categoryTypes.EXPENSE')}
                     </span>
                   </div>
                 </div>
@@ -231,16 +241,16 @@ export default function CategoriesPage() {
                     <button
                       type="button"
                       onClick={() => openEditModal(cat)}
-                      className="p-1.5 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-100"
-                      title="Chỉnh sửa"
+                      className="p-1.5 rounded-lg text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-zinc-800"
+                      title={t('common.edit')}
                     >
                       <PencilSquareIcon className="h-4 w-4" />
                     </button>
                     <button
                       type="button"
                       onClick={() => setDeleteTarget(cat)}
-                      className="p-1.5 rounded-lg text-slate-500 hover:text-rose-600 hover:bg-rose-50"
-                      title="Xóa"
+                      className="p-1.5 rounded-lg text-slate-500 dark:text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/50"
+                      title={t('common.delete')}
                     >
                       <TrashIcon className="h-4 w-4" />
                     </button>
@@ -255,37 +265,39 @@ export default function CategoriesPage() {
       <Modal
         isOpen={modalOpen}
         onClose={() => setModalOpen(false)}
-        title={editingCategory ? 'Chỉnh sửa danh mục' : 'Thêm danh mục tùy chỉnh'}
-        subtitle="Chọn tên, biểu tượng và màu sắc để dễ nhận diện khi ghi giao dịch."
+        title={editingCategory ? t('categories.modalEditTitle') : t('categories.modalCreateTitle')}
+        subtitle={t('categories.modalSubtitle')}
       >
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div className="grid sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                Tên danh mục <span className="text-rose-500">*</span>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                {t('categories.nameLabel')} <span className="text-rose-500">*</span>
               </label>
               <input
                 type="text"
-                placeholder="Ví dụ: Cà phê, Thú cưng..."
+                placeholder={t('categories.namePlaceholder')}
                 {...register('name', {
-                  required: 'Vui lòng nhập tên danh mục',
-                  maxLength: { value: 100, message: 'Tối đa 100 ký tự' },
+                  required: t('categories.nameRequired'),
+                  maxLength: { value: 100, message: t('categories.nameMax') },
                 })}
-                className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm focus:border-emerald-500 outline-none"
+                className="w-full rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-900 dark:text-slate-100 px-3.5 py-2.5 text-sm focus:border-emerald-500 outline-none"
               />
-              {errors.name && <p className="text-xs text-rose-600 mt-1">{errors.name.message}</p>}
+              {errors.name && <p className="text-xs text-rose-600 dark:text-rose-400 mt-1">{errors.name.message}</p>}
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1.5">Loại</label>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                {t('categories.typeLabel')}
+              </label>
               <select
                 disabled={Boolean(editingCategory)}
                 {...register('categoryType')}
-                className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm bg-white disabled:bg-slate-100 outline-none focus:border-emerald-500"
+                className="w-full rounded-xl border border-slate-200 dark:border-zinc-800 px-3 py-2.5 text-sm bg-white dark:bg-zinc-900 text-slate-900 dark:text-slate-100 disabled:bg-slate-100 dark:disabled:bg-zinc-900/60 outline-none focus:border-emerald-500"
               >
-                {CATEGORY_TYPES.map((t) => (
-                  <option key={t.value} value={t.value}>
-                    {t.label}
+                {CATEGORY_TYPES.map((item) => (
+                  <option key={item.value} value={item.value}>
+                    {t(item.labelKey)}
                   </option>
                 ))}
               </select>
@@ -293,7 +305,9 @@ export default function CategoriesPage() {
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-2">Biểu tượng</label>
+            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-2">
+              {t('categories.iconLabel')}
+            </label>
             <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
               {CATEGORY_ICON_OPTIONS.map((opt) => {
                 const active = selectedIcon === opt.value;
@@ -304,8 +318,8 @@ export default function CategoriesPage() {
                     onClick={() => setValue('icon', opt.value)}
                     className={`flex flex-col items-center gap-1 p-2 rounded-xl border text-[11px] transition-colors ${
                       active
-                        ? 'border-emerald-500 bg-emerald-50 text-emerald-700 font-semibold'
-                        : 'border-slate-200 hover:bg-slate-50 text-slate-600'
+                        ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 font-semibold'
+                        : 'border-slate-200 dark:border-zinc-800 hover:bg-slate-50 dark:hover:bg-zinc-900 text-slate-600 dark:text-slate-300'
                     }`}
                   >
                     <CategoryIcon
@@ -313,7 +327,7 @@ export default function CategoriesPage() {
                       color={active ? selectedColor || '#10B981' : '#64748B'}
                       className="h-5 w-5"
                     />
-                    <span className="truncate w-full text-center">{opt.label}</span>
+                    <span className="truncate w-full text-center">{t(opt.labelKey)}</span>
                   </button>
                 );
               })}
@@ -321,7 +335,9 @@ export default function CategoriesPage() {
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-2">Màu sắc</label>
+            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-2">
+              {t('categories.colorLabel')}
+            </label>
             <div className="flex flex-wrap gap-2">
               {HEX_COLOR_PALETTE.map((hex) => {
                 const active = selectedColor?.toUpperCase() === hex.toUpperCase();
@@ -331,7 +347,7 @@ export default function CategoriesPage() {
                     type="button"
                     onClick={() => setValue('color', hex)}
                     className={`h-8 w-8 rounded-full border-2 transition-transform ${
-                      active ? 'border-slate-900 scale-110' : 'border-transparent'
+                      active ? 'border-slate-900 dark:border-white scale-110' : 'border-transparent'
                     }`}
                     style={{ backgroundColor: hex }}
                     aria-label={hex}
@@ -345,16 +361,20 @@ export default function CategoriesPage() {
             <button
               type="button"
               onClick={() => setModalOpen(false)}
-              className="px-4 py-2 rounded-xl border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+              className="px-4 py-2 rounded-xl border border-slate-200 dark:border-zinc-700 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-zinc-800"
             >
-              Hủy
+              {t('common.cancel')}
             </button>
             <button
               type="submit"
               disabled={submitting}
               className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold disabled:opacity-60"
             >
-              {submitting ? 'Đang lưu...' : editingCategory ? 'Cập nhật' : 'Tạo danh mục'}
+              {submitting
+                ? t('common.saving')
+                : editingCategory
+                  ? t('categories.updateBtn')
+                  : t('categories.createBtn')}
             </button>
           </div>
         </form>
@@ -365,11 +385,10 @@ export default function CategoriesPage() {
         onClose={() => setDeleteTarget(null)}
         onConfirm={handleDelete}
         loading={deleting}
-        title="Xóa danh mục"
-        message={`Bạn có chắc muốn xóa danh mục "${deleteTarget?.name}"?`}
-        confirmLabel="Xóa"
+        title={t('categories.deleteTitle')}
+        message={t('categories.deleteConfirm', { name: deleteTarget?.name || '' })}
+        confirmLabel={t('common.delete')}
       />
     </div>
   );
 }
-

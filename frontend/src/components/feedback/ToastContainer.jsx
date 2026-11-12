@@ -7,9 +7,11 @@ import {
   XMarkIcon,
 } from '@heroicons/react/24/outline';
 import { dismissToast } from '../../features/feedback/feedbackSlice';
+import { useTranslation } from '../../i18n/I18nContext';
 
 function ToastItem({ toast }) {
   const dispatch = useDispatch();
+  const { t } = useTranslation();
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -41,7 +43,7 @@ function ToastItem({ toast }) {
         type="button"
         onClick={() => dispatch(dismissToast(toast.id))}
         className="text-white/70 hover:text-white"
-        aria-label="Đóng thông báo"
+        aria-label={t('common.closeToast')}
       >
         <XMarkIcon className="h-4 w-4" />
       </button>

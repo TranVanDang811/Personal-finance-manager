@@ -1,7 +1,9 @@
 import { useEffect } from 'react';
 import { XMarkIcon } from '@heroicons/react/24/outline';
+import { useTranslation } from '../../i18n/I18nContext';
 
 export default function Modal({ isOpen, onClose, title, subtitle, size = 'md', children }) {
+  const { t } = useTranslation();
   useEffect(() => {
     if (!isOpen) return undefined;
     const handleKeyDown = (e) => {
@@ -29,17 +31,17 @@ export default function Modal({ isOpen, onClose, title, subtitle, size = 'md', c
         if (e.target === e.currentTarget) onClose?.();
       }}
     >
-      <div className={`w-full ${sizeClass} bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]`}>
-        <div className="flex items-start justify-between gap-4 px-6 py-4 border-b border-slate-100">
+      <div className={`w-full ${sizeClass} bg-white dark:bg-zinc-950 rounded-2xl shadow-2xl border border-slate-200 dark:border-zinc-800 overflow-hidden flex flex-col max-h-[90vh]`}>
+        <div className="flex items-start justify-between gap-4 px-6 py-4 border-b border-slate-100 dark:border-zinc-800">
           <div>
-            <h3 className="text-lg font-semibold text-slate-900">{title}</h3>
-            {subtitle && <p className="text-xs text-slate-500 mt-0.5">{subtitle}</p>}
+            <h3 className="text-lg font-semibold text-slate-900 dark:text-white">{title}</h3>
+            {subtitle && <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{subtitle}</p>}
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
-            aria-label="Đóng hộp thoại"
+            className="rounded-lg p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors"
+            aria-label={t('common.closeModal')}
           >
             <XMarkIcon className="h-5 w-5" />
           </button>

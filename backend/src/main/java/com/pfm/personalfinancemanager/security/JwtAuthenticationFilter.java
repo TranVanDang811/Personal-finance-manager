@@ -43,7 +43,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 Claims claims = jwtService.parseAndValidateToken(token);
                 String jti = jwtService.extractJti(claims);
 
-                if (!tokenBlacklistService.isTokenBlacklisted(jti)) {
+                if (StringUtils.hasText(jti) && !tokenBlacklistService.isTokenBlacklisted(jti)) {
                     String userId = jwtService.extractUserId(claims);
                     CustomUserDetails userDetails = userDetailsService.loadUserById(userId);
 
