@@ -42,9 +42,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             try {
                 Claims claims = jwtService.parseAndValidateToken(token);
                 String jti = jwtService.extractJti(claims);
+                String userId = jwtService.extractUserId(claims);
+                java.time.Instant issuedAt = claims.getIssuedAt() != null ? claims.getIssuedAt().toInstant() : null;
 
-                if (StringUtils.hasText(jti) && !tokenBlacklistService.isTokenBlacklisted(jti)) {
-                    String userId = jwtService.extractUserId(claims);
+                if (StringUtils.hasText(jti)
+                        && !tokenBlacklistService.isTokenBlacklisted(jti)
+                        && !tokenBlacklistService.isUserTokenRevoked(userId, issuedAt)) {
                     CustomUserDetails userDetails = userDetailsService.loadUserById(userId);
 
                     if (userDetails.isEnabled() && userDetails.isAccountNonLocked()) {

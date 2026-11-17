@@ -30,6 +30,8 @@ public class UserServiceImpl implements UserService {
     private final PasswordEncoder passwordEncoder;
     private final UserMapper userMapper;
     private final FileStorageService fileStorageService;
+    private final com.pfm.personalfinancemanager.security.TokenBlacklistService tokenBlacklistService;
+    private final com.pfm.personalfinancemanager.security.JwtService jwtService;
 
     @Override
     @Transactional(readOnly = true)
@@ -69,6 +71,11 @@ public class UserServiceImpl implements UserService {
         userRepository.save(user);
 
         refreshTokenRepository.revokeAllByUserId(user.getId());
+        tokenBlacklistService.blacklistUserTokensBefore(
+                userId,
+                java.time.Instant.now(),
+                java.time.Duration.ofMillis(jwtService.getAccessExpirationMs())
+        );
         log.info("Password changed for user {}", userId);
     }
 

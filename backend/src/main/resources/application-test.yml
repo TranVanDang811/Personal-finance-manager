@@ -26,6 +26,8 @@ logging:
     com.pfm.personalfinancemanager: INFO
 
 app:
+  jwt:
+    secret: ${JWT_SECRET:test-dummy-secret-key-must-be-at-least-256-bits-long-for-testing-purpose-only-2026}
   storage:
     provider: local
     upload-dir: ./target/test-uploads

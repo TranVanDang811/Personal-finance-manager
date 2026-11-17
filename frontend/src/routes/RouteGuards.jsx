@@ -22,3 +22,18 @@ export function PublicRoute() {
   return <Outlet />;
 }
 
+export function RequireRole({ allowedRoles = ['ROLE_ADMIN'], redirectTo = '/dashboard' }) {
+  const { isAuthenticated, user } = useSelector((state) => state.auth);
+  const location = useLocation();
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  const userRole = user?.role;
+  if (!userRole || !allowedRoles.includes(userRole)) {
+    return <Navigate to={redirectTo} replace />;
+  }
+
+  return <Outlet />;
+}

@@ -31,7 +31,9 @@ public enum ErrorCode {
     CATEGORY_TYPE_MISMATCH(HttpStatus.BAD_REQUEST, "CATEGORY_TYPE_MISMATCH", "Loại danh mục không khớp với loại giao dịch"),
     SAME_ACCOUNT_TRANSFER(HttpStatus.BAD_REQUEST, "SAME_ACCOUNT_TRANSFER", "Tài khoản nguồn và tài khoản đích không được trùng nhau"),
     IDEMPOTENCY_CONFLICT(HttpStatus.CONFLICT, "IDEMPOTENCY_CONFLICT", "Yêu cầu giao dịch đang được xử lý hoặc đã tồn tại"),
-    RATE_LIMIT_EXCEEDED(HttpStatus.TOO_MANY_REQUESTS, "RATE_LIMIT_EXCEEDED", "Quá nhiều yêu cầu, vui lòng thử lại sau");
+    RATE_LIMIT_EXCEEDED(HttpStatus.TOO_MANY_REQUESTS, "RATE_LIMIT_EXCEEDED", "Quá nhiều yêu cầu, vui lòng thử lại sau"),
+    PAYLOAD_TOO_LARGE(HttpStatus.PAYLOAD_TOO_LARGE, "PAYLOAD_TOO_LARGE", "Kích thước tệp tải lên vượt quá giới hạn cho phép (5MB)"),
+    INVALID_SORT_PROPERTY(HttpStatus.BAD_REQUEST, "INVALID_SORT_PROPERTY", "Thuộc tính sắp xếp không hợp lệ");
 
     private final HttpStatus httpStatus;
     private final String code;

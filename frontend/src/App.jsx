@@ -1,24 +1,26 @@
-import { Suspense, lazy } from 'react';
+import { Suspense } from 'react';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { ProtectedRoute, PublicRoute } from './routes/RouteGuards';
 import LoadingSpinner from './components/feedback/LoadingSpinner';
 import AuthLayout from './layouts/AuthLayout';
 import MainLayout from './layouts/MainLayout';
+import { lazyWithRetry } from './utils/lazyWithRetry';
 
-const LoginPage = lazy(() => import('./pages/auth/LoginPage'));
-const RegisterPage = lazy(() => import('./pages/auth/RegisterPage'));
-const ForgotPasswordPage = lazy(() => import('./pages/auth/ForgotPasswordPage'));
-const ResetPasswordPage = lazy(() => import('./pages/auth/ResetPasswordPage'));
-const DashboardPage = lazy(() => import('./pages/dashboard/DashboardPage'));
-const AccountsPage = lazy(() => import('./pages/accounts/AccountsPage'));
-const CategoriesPage = lazy(() => import('./pages/categories/CategoriesPage'));
-const TransactionsPage = lazy(() => import('./pages/transactions/TransactionsPage'));
-const BudgetsPage = lazy(() => import('./pages/budgets/BudgetsPage'));
-const SavingGoalsPage = lazy(() => import('./pages/savings/SavingGoalsPage'));
-const RecurringTransactionsPage = lazy(() => import('./pages/recurring/RecurringTransactionsPage'));
-const ReportsPage = lazy(() => import('./pages/reports/ReportsPage'));
-const NotificationsPage = lazy(() => import('./pages/notifications/NotificationsPage'));
-const ProfilePage = lazy(() => import('./pages/profile/ProfilePage'));
+const LoginPage = lazyWithRetry(() => import('./pages/auth/LoginPage'));
+const RegisterPage = lazyWithRetry(() => import('./pages/auth/RegisterPage'));
+const ForgotPasswordPage = lazyWithRetry(() => import('./pages/auth/ForgotPasswordPage'));
+const ResetPasswordPage = lazyWithRetry(() => import('./pages/auth/ResetPasswordPage'));
+const DashboardPage = lazyWithRetry(() => import('./pages/dashboard/DashboardPage'));
+const AccountsPage = lazyWithRetry(() => import('./pages/accounts/AccountsPage'));
+const CategoriesPage = lazyWithRetry(() => import('./pages/categories/CategoriesPage'));
+const TransactionsPage = lazyWithRetry(() => import('./pages/transactions/TransactionsPage'));
+const BudgetsPage = lazyWithRetry(() => import('./pages/budgets/BudgetsPage'));
+const SavingGoalsPage = lazyWithRetry(() => import('./pages/savings/SavingGoalsPage'));
+const RecurringTransactionsPage = lazyWithRetry(() => import('./pages/recurring/RecurringTransactionsPage'));
+const ReportsPage = lazyWithRetry(() => import('./pages/reports/ReportsPage'));
+const NotificationsPage = lazyWithRetry(() => import('./pages/notifications/NotificationsPage'));
+const ProfilePage = lazyWithRetry(() => import('./pages/profile/ProfilePage'));
+const NotFoundPage = lazyWithRetry(() => import('./pages/error/NotFoundPage'));
 
 function RouteFallback() {
   return (
@@ -58,10 +60,9 @@ export default function App() {
           </Route>
 
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
-          <Route path="*" element={<Navigate to="/dashboard" replace />} />
+          <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </Suspense>
     </BrowserRouter>
   );
 }
-

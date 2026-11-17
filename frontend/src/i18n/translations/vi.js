@@ -676,6 +676,14 @@ const vi = {
     passwordChanged: 'Đổi mật khẩu thành công.',
     passwordError: 'Không thể đổi mật khẩu.',
   },
+  error: {
+    boundaryTitle: 'Đã có sự cố xảy ra',
+    boundaryDesc: 'Ứng dụng gặp sự cố không mong muốn trong lúc hiển thị. Vui lòng tải lại trang để tiếp tục.',
+    reloadBtn: 'Tải lại trang',
+    backHome: 'Về trang chủ',
+    notFoundTitle: 'Không tìm thấy trang',
+    notFoundDesc: 'Đường dẫn bạn yêu cầu không tồn tại hoặc đã được di chuyển sang địa chỉ khác.',
+  },
 };
 
 export default vi;

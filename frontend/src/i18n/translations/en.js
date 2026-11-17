@@ -676,6 +676,14 @@ const en = {
     passwordChanged: 'Password changed successfully.',
     passwordError: 'Unable to change password.',
   },
+  error: {
+    boundaryTitle: 'Something went wrong',
+    boundaryDesc: 'The application encountered an unexpected issue while rendering. Please reload the page to continue.',
+    reloadBtn: 'Reload page',
+    backHome: 'Back to Dashboard',
+    notFoundTitle: 'Page Not Found',
+    notFoundDesc: 'The page you requested does not exist or has been moved.',
+  },
 };
 
 export default en;

@@ -33,6 +33,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import java.util.Optional;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -90,15 +91,15 @@ public class AuthServiceImpl implements AuthService {
         Authentication authentication;
         try {
             authentication = authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(normalizedEmail, request.getPassword())
-            );
+                    new UsernamePasswordAuthenticationToken(normalizedEmail, request.getPassword()));
         } catch (AuthenticationException ex) {
             throw new UnauthorizedAccessException(ErrorCode.INVALID_CREDENTIALS, "Email hoặc mật khẩu không chính xác");
         }
 
         CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
         User user = userRepository.findById(userDetails.getId())
-                .orElseThrow(() -> new UnauthorizedAccessException(ErrorCode.INVALID_CREDENTIALS, "Không tìm thấy tài khoản"));
+                .orElseThrow(() -> new UnauthorizedAccessException(ErrorCode.INVALID_CREDENTIALS,
+                        "Không tìm thấy tài khoản"));
 
         return issueAuthTokens(user, deviceInfo);
     }
@@ -108,7 +109,8 @@ public class AuthServiceImpl implements AuthService {
     public AuthResponse refreshToken(RefreshTokenRequest request, String deviceInfo) {
         String tokenHash = TokenHashUtil.sha256Hex(request.getRefreshToken());
         RefreshToken storedToken = refreshTokenRepository.findByTokenHash(tokenHash)
-                .orElseThrow(() -> new UnauthorizedAccessException(ErrorCode.INVALID_TOKEN, "Refresh token không hợp lệ"));
+                .orElseThrow(
+                        () -> new UnauthorizedAccessException(ErrorCode.INVALID_TOKEN, "Refresh token không hợp lệ"));
 
         User user = storedToken.getUser();
 
@@ -127,7 +129,8 @@ public class AuthServiceImpl implements AuthService {
         }
 
         if (user.getStatus() != UserStatus.ACTIVE) {
-            throw new UnauthorizedAccessException(ErrorCode.UNAUTHORIZED, "Tài khoản hiện đang bị khóa hoặc ngừng hoạt động");
+            throw new UnauthorizedAccessException(ErrorCode.UNAUTHORIZED,
+                    "Tài khoản hiện đang bị khóa hoặc ngừng hoạt động");
         }
 
         storedToken.setRevoked(true);
@@ -168,22 +171,31 @@ public class AuthServiceImpl implements AuthService {
     @Transactional
     public void forgotPassword(ForgotPasswordRequest request) {
         String normalizedEmail = normalizeEmail(request.getEmail());
-        userRepository.findByEmailIgnoreCase(normalizedEmail).ifPresent(user -> {
-            if (user.getStatus() == UserStatus.ACTIVE) {
-                passwordResetTokenRepository.invalidateAllByUserId(user.getId());
+        Optional<User> userOpt = userRepository.findByEmailIgnoreCase(normalizedEmail);
+        if (userOpt.isEmpty()) {
+            log.warn("[AUTH] Forgot password requested for non-existing email: '{}'", normalizedEmail);
+            return;
+        }
 
-                String rawToken = TokenHashUtil.generateSecureRandomToken(32);
-                PasswordResetToken resetToken = PasswordResetToken.builder()
-                        .user(user)
-                        .tokenHash(TokenHashUtil.sha256Hex(rawToken))
-                        .expiryDate(Instant.now().plusMillis(passwordResetExpirationMs))
-                        .used(false)
-                        .build();
+        User user = userOpt.get();
+        if (user.getStatus() != UserStatus.ACTIVE) {
+            log.warn("[AUTH] Forgot password requested for inactive user: '{}' (status={})", normalizedEmail,
+                    user.getStatus());
+            return;
+        }
 
-                passwordResetTokenRepository.save(resetToken);
-                emailService.sendPasswordResetEmail(user.getEmail(), user.getFullName(), rawToken);
-            }
-        });
+        passwordResetTokenRepository.invalidateAllByUserId(user.getId());
+
+        String rawToken = TokenHashUtil.generateSecureRandomToken(32);
+        PasswordResetToken resetToken = PasswordResetToken.builder()
+                .user(user)
+                .tokenHash(TokenHashUtil.sha256Hex(rawToken))
+                .expiryDate(Instant.now().plusMillis(passwordResetExpirationMs))
+                .used(false)
+                .build();
+
+        passwordResetTokenRepository.save(resetToken);
+        emailService.sendPasswordResetEmail(user.getEmail(), user.getFullName(), rawToken);
     }
 
     @Override
@@ -195,10 +207,12 @@ public class AuthServiceImpl implements AuthService {
 
         String tokenHash = TokenHashUtil.sha256Hex(request.getToken());
         PasswordResetToken resetToken = passwordResetTokenRepository.findByTokenHash(tokenHash)
-                .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_RESET_TOKEN, "Token đặt lại mật khẩu không hợp lệ"));
+                .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_RESET_TOKEN,
+                        "Token đặt lại mật khẩu không hợp lệ"));
 
         if (resetToken.isUsed() || resetToken.getExpiryDate().isBefore(Instant.now())) {
-            throw new BusinessException(ErrorCode.INVALID_RESET_TOKEN, "Token đặt lại mật khẩu đã hết hạn hoặc đã được sử dụng");
+            throw new BusinessException(ErrorCode.INVALID_RESET_TOKEN,
+                    "Token đặt lại mật khẩu đã hết hạn hoặc đã được sử dụng");
         }
 
         User user = resetToken.getUser();
@@ -209,6 +223,11 @@ public class AuthServiceImpl implements AuthService {
         passwordResetTokenRepository.save(resetToken);
 
         refreshTokenRepository.revokeAllByUserId(user.getId());
+        tokenBlacklistService.blacklistUserTokensBefore(
+                user.getId(),
+                Instant.now(),
+                Duration.ofMillis(jwtService.getAccessExpirationMs())
+        );
         log.info("Password reset completed for user {}", user.getId());
     }
 
@@ -247,4 +266,3 @@ public class AuthServiceImpl implements AuthService {
         return deviceInfo.length() > 255 ? deviceInfo.substring(0, 255) : deviceInfo;
     }
 }
-

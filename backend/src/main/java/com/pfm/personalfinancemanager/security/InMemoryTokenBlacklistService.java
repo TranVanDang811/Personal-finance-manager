@@ -13,6 +13,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class InMemoryTokenBlacklistService implements TokenBlacklistService {
 
     private final Map<String, Instant> blacklistedTokens = new ConcurrentHashMap<>();
+    private final Map<String, Instant> userRevocationMap = new ConcurrentHashMap<>();
 
     @Override
     public void blacklistToken(String jti, Duration ttl) {
@@ -36,5 +37,22 @@ public class InMemoryTokenBlacklistService implements TokenBlacklistService {
             return false;
         }
         return true;
+    }
+
+    @Override
+    public void blacklistUserTokensBefore(String userId, Instant timestamp, Duration ttl) {
+        if (userId == null || timestamp == null || ttl.isNegative() || ttl.isZero()) {
+            return;
+        }
+        userRevocationMap.put(userId, timestamp);
+    }
+
+    @Override
+    public boolean isUserTokenRevoked(String userId, Instant issuedAt) {
+        if (userId == null || issuedAt == null) {
+            return false;
+        }
+        Instant revokedAt = userRevocationMap.get(userId);
+        return revokedAt != null && issuedAt.isBefore(revokedAt);
     }
 }

@@ -26,9 +26,14 @@ public final class TransactionSpecification {
             }
 
             if (StringUtils.hasText(filter.getKeyword())) {
-                String pattern = "%" + filter.getKeyword().trim().toLowerCase(Locale.ROOT) + "%";
-                Predicate descMatch = cb.like(cb.lower(root.get("description")), pattern);
-                Predicate noteMatch = cb.like(cb.lower(cb.coalesce(root.get("note"), "")), pattern);
+                String sanitized = filter.getKeyword().trim()
+                        .replace("\\", "\\\\")
+                        .replace("%", "\\%")
+                        .replace("_", "\\_")
+                        .toLowerCase(Locale.ROOT);
+                String pattern = "%" + sanitized + "%";
+                Predicate descMatch = cb.like(cb.lower(root.get("description")), pattern, '\\');
+                Predicate noteMatch = cb.like(cb.lower(cb.coalesce(root.get("note"), "")), pattern, '\\');
                 predicates.add(cb.or(descMatch, noteMatch));
             }
 

@@ -33,7 +33,8 @@ public class AuthRateLimitFilter extends OncePerRequestFilter {
             "/api/v1/auth/login",
             "/api/v1/auth/register",
             "/api/v1/auth/forgot-password",
-            "/api/v1/auth/reset-password"
+            "/api/v1/auth/reset-password",
+            "/api/v1/auth/refresh-token"
     );
 
     private final RateLimiterService rateLimiterService;
@@ -94,9 +95,15 @@ public class AuthRateLimitFilter extends OncePerRequestFilter {
 
     private String resolveClientIp(HttpServletRequest request) {
         if (trustForwardedHeaders) {
+            String realIp = request.getHeader("X-Real-IP");
+            if (StringUtils.hasText(realIp)) {
+                return realIp.trim();
+            }
             String forwarded = request.getHeader("X-Forwarded-For");
             if (StringUtils.hasText(forwarded)) {
-                return forwarded.split(",")[0].trim();
+                String[] ips = forwarded.split(",");
+                // Use the rightmost client IP appended by the trusted reverse proxy
+                return ips[ips.length - 1].trim();
             }
         }
         return StringUtils.hasText(request.getRemoteAddr()) ? request.getRemoteAddr() : "unknown";

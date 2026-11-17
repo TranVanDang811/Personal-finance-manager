@@ -782,7 +782,7 @@ export default function TransactionsPage() {
                 <a
                   href={attachmentTx.attachmentUrl}
                   target="_blank"
-                  rel="noreferrer"
+                  rel="noopener noreferrer"
                   className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:underline"
                 >
                   {t('transactions.openImageNewTab')}
